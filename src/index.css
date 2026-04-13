@@ -1,0 +1,98 @@
+@import 'tailwindcss';
+
+/* Reference: welcome screen — pink/lavender → sky (#F8C8DC → #A3D8F4), primary purple #8E4585 */
+@theme {
+  --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+
+  --color-page-top: #f8c8dc;
+  --color-page-bottom: #a3d8f4;
+
+  --color-canvas: #eef6fc;
+  --color-surface: #ffffff;
+  --color-surface-2: #fffcfd;
+  --color-surface-3: color-mix(in oklab, var(--color-page-bottom) 22%, white);
+
+  --color-border: color-mix(in oklab, var(--color-fg) 11%, white);
+  --color-border-strong: color-mix(in oklab, var(--color-fg) 18%, white);
+
+  /* Muted charcoal for “Or continue with” / secondary lines */
+  --color-muted: #5c5660;
+  --color-muted-on-gradient: color-mix(in oklab, #2a2628 55%, white);
+
+  --color-fg: #4a3548;
+  --color-fg-soft: #5e4a5c;
+
+  --color-accent: #8e4585;
+  --color-accent-soft: color-mix(in oklab, var(--color-accent) 12%, white);
+  --color-on-accent: #ffffff;
+
+  /* Soft sky accent (cards, skeletons) — aligned with gradient bottom */
+  --color-secondary: #8ec8eb;
+  --color-secondary-soft: color-mix(in oklab, var(--color-page-bottom) 28%, white);
+  --color-secondary-ink: #3d6d8c;
+
+  --color-warm: #e8a090;
+  --color-warm-soft: color-mix(in oklab, var(--color-warm) 22%, white);
+
+  --color-danger: #c75050;
+  --color-danger-soft: color-mix(in oklab, var(--color-danger) 14%, white);
+  --color-warning: #c98a32;
+  --color-warning-soft: color-mix(in oklab, var(--color-warning) 18%, white);
+  --color-success: #4d8f6f;
+  --color-success-soft: color-mix(in oklab, var(--color-success) 14%, white);
+
+  --shadow-card:
+    0 1px 0 color-mix(in oklab, white 92%, var(--color-fg)) inset,
+    0 12px 40px -14px color-mix(in oklab, var(--color-accent) 12%, transparent),
+    0 4px 16px -6px color-mix(in oklab, var(--color-page-bottom) 35%, transparent);
+  --shadow-float:
+    0 22px 56px -18px color-mix(in oklab, var(--color-accent) 16%, transparent),
+    0 10px 24px -12px color-mix(in oklab, var(--color-page-bottom) 40%, transparent);
+
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.125rem;
+  --radius-2xl: 1.5rem;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    font-optical-sizing: auto;
+    background-color: var(--color-page-bottom);
+    background-image: linear-gradient(
+      180deg,
+      var(--color-page-top) 0%,
+      var(--color-page-bottom) 100%
+    );
+    background-attachment: fixed;
+    color: var(--color-fg);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  #root {
+    min-height: 100dvh;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-accent) 26%, transparent);
+    color: var(--color-fg);
+  }
+}
+
+@utility text-balance {
+  text-wrap: balance;
+}
