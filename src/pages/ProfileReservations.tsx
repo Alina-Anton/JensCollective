@@ -223,15 +223,11 @@ export function ProfileReservations() {
                 Change password
               </Button>
               <Button variant="ghost" className="w-full">
-                Download my data
+                Log out
               </Button>
-              <p className="text-xs text-muted">
-                Need to pause membership?{' '}
-                <Link className="font-semibold text-fg-soft hover:text-fg" to="/community">
-                  Message admins in Community
-                </Link>
-                .
-              </p>
+              <Button variant="danger" className="w-full">
+                Delete account
+              </Button>
             </CardBody>
           </Card>
         </div>

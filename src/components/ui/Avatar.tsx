@@ -2,10 +2,12 @@ import { cn } from '@/lib/cn'
 
 export function Avatar({
   initials,
+  src,
   className,
   title,
 }: {
   initials: string
+  src?: string | null
   className?: string
   title?: string
 }) {
@@ -17,7 +19,11 @@ export function Avatar({
         className,
       )}
     >
-      {initials}
+      {src ? (
+        <img src={src} alt={title ?? 'User avatar'} className="size-full rounded-full object-cover" />
+      ) : (
+        initials
+      )}
     </div>
   )
 }

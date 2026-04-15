@@ -60,6 +60,7 @@ export const currentUser = {
   name: 'Jordan Ellis',
   email: 'jordan@example.com',
   initials: 'JE',
+  avatarUrl: '',
   memberSince: '2023-09-12',
   tier: 'Founding member',
 }

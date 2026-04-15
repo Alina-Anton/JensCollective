@@ -18,6 +18,16 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        <button
+          type="button"
+          className="inline-flex rounded-xl border border-border bg-surface-2 p-2 text-fg md:hidden"
+          aria-expanded={open}
+          aria-label="Open menu"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? <CloseIcon /> : <MenuIcon />}
+        </button>
+
         <Logo />
 
         <nav className="hidden items-center gap-1 md:flex">
@@ -54,23 +64,13 @@ export function Navbar() {
           </Link>
           <Link
             to="/me"
-            className="hidden items-center gap-2 rounded-xl border border-border bg-surface-2/70 px-2 py-1.5 transition hover:border-border-strong sm:inline-flex"
+            className="inline-flex items-center gap-2 px-0 py-0.5 transition"
           >
             <Avatar initials={currentUser.initials} title={currentUser.name} className="size-8" />
-            <span className="max-w-[9rem] truncate pr-1 text-xs font-semibold text-fg-soft">
+            <span className="hidden max-w-[9rem] truncate pr-1 text-xs font-semibold text-fg-soft sm:block">
               {currentUser.name}
             </span>
           </Link>
-
-          <button
-            type="button"
-            className="inline-flex rounded-xl border border-border bg-surface-2 p-2 text-fg md:hidden"
-            aria-expanded={open}
-            aria-label="Open menu"
-            onClick={() => setOpen((v) => !v)}
-          >
-            {open ? <CloseIcon /> : <MenuIcon />}
-          </button>
         </div>
       </div>
 
@@ -94,13 +94,6 @@ export function Navbar() {
               </NavLink>
             ))}
             <Link
-              to="/events/new"
-              onClick={() => setOpen(false)}
-              className="rounded-xl bg-accent px-3 py-2 text-center text-sm font-semibold text-on-accent"
-            >
-              Create event
-            </Link>
-            <Link
               to="/settings/notifications"
               onClick={() => setOpen(false)}
               className="rounded-xl px-3 py-2 text-sm font-semibold text-fg-soft hover:bg-surface-2"
@@ -110,10 +103,9 @@ export function Navbar() {
             <Link
               to="/me"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-fg-soft hover:bg-surface-2"
+              className="rounded-xl px-3 py-2 text-sm font-semibold text-fg-soft hover:bg-surface-2"
             >
-              <Avatar initials={currentUser.initials} className="size-8" />
-              Profile & reservations
+              My Profile
             </Link>
           </div>
         </div>

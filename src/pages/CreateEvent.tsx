@@ -60,13 +60,13 @@ export function CreateEvent() {
       </div>
 
       <form
-        className="mx-auto grid max-w-3xl gap-6 lg:grid-cols-5"
+        className="mx-auto max-w-3xl"
         onSubmit={(e) => {
           e.preventDefault()
           window.setTimeout(() => setSubmitted(true), 450)
         }}
       >
-        <Card className="lg:col-span-3">
+        <Card>
           <CardHeader>
             <h2 className="font-display text-lg text-fg">Details</h2>
           </CardHeader>
@@ -115,24 +115,6 @@ export function CreateEvent() {
                 <option>Social</option>
               </select>
             </div>
-          </CardBody>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <h2 className="font-display text-lg text-fg">Presentation</h2>
-          </CardHeader>
-          <CardBody className="space-y-4">
-            <div className="rounded-2xl border border-dashed border-border bg-surface/40 p-6 text-center">
-              <p className="text-sm font-semibold text-fg">Image upload</p>
-              <p className="mt-2 text-xs text-muted">
-                Drag a cover image here, or browse. Recommended 1600×900, under 2MB.
-              </p>
-              <Button type="button" variant="secondary" className="mt-4 w-full">
-                Choose file
-              </Button>
-            </div>
-
             <div className="rounded-2xl border border-border bg-surface/40 p-4 text-xs text-muted">
               <p className="font-semibold text-fg-soft">Publishing checklist</p>
               <ul className="mt-2 list-disc space-y-1 pl-4">
@@ -142,12 +124,12 @@ export function CreateEvent() {
               </ul>
             </div>
 
-            <div className="flex flex-col gap-3 pt-2">
-              <Button type="submit" variant="primary" className="w-full">
-                Publish event
-              </Button>
-              <Button type="button" variant="ghost" className="w-full">
+            <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:justify-end">
+              <Button type="button" variant="ghost" className="sm:w-auto">
                 Save as draft
+              </Button>
+              <Button type="submit" variant="primary" className="sm:w-auto">
+                Publish event
               </Button>
             </div>
           </CardBody>

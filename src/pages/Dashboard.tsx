@@ -1,44 +1,50 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { StatsCard } from '@/components/dashboard/StatsCard'
-import { EventCard } from '@/components/events/EventCard'
-import { Button } from '@/components/ui/Button'
-import { Card, CardBody } from '@/components/ui/Card'
-import { DashboardSkeleton } from '@/components/ui/Skeleton'
-import { activityFeed, currentUser, events, reservations } from '@/data/mockData'
-import { formatRelative } from '@/lib/format'
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { StatsCard } from "@/components/dashboard/StatsCard";
+import { EventCard } from "@/components/events/EventCard";
+import { Button } from "@/components/ui/Button";
+import { DashboardSkeleton } from "@/components/ui/Skeleton";
+import {
+  currentUser,
+  events,
+  reservations,
+} from "@/data/mockData";
 
 const reservedSet = new Set(
-  reservations.filter((r) => r.status === 'confirmed' || r.status === 'waitlist').map((r) => r.eventId),
-)
+  reservations
+    .filter((r) => r.status === "confirmed" || r.status === "waitlist")
+    .map((r) => r.eventId),
+);
 
 export function Dashboard() {
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const t = window.setTimeout(() => setLoading(false), 780)
-    return () => window.clearTimeout(t)
-  }, [])
+    const t = window.setTimeout(() => setLoading(false), 780);
+    return () => window.clearTimeout(t);
+  }, []);
 
   const upcoming = useMemo(() => {
     return [...events]
-      .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
-      .slice(0, 3)
-  }, [])
+      .sort(
+        (a, b) =>
+          new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+      )
+      .slice(0, 3);
+  }, []);
 
-  if (loading) return <DashboardSkeleton />
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-10">
       <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
         <div className="min-w-0 space-y-2">
-          <p className="text-xs font-semibold tracking-[0.2em] text-muted uppercase">Home</p>
           <h1 className="font-display text-3xl tracking-tight text-fg sm:text-4xl">
-            Good evening, {currentUser.name.split(' ')[0]}
+            Good evening, {currentUser.name.split(" ")[0]}
           </h1>
           <p className="max-w-2xl text-sm leading-relaxed text-muted">
-            Your week is shaping up thoughtfully—two reservations confirmed, one waitlist, and a
-            community note pinned for Saturday.
+            Your week is shaping up thoughtfully—two reservations confirmed, one
+            waitlist, and a community note pinned for Saturday.
           </p>
         </div>
         <Button to="/events/new" variant="primary" className="sm:self-start">
@@ -46,35 +52,28 @@ export function Dashboard() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <StatsCard
-          label="This week"
+          label="My bookings"
           value="4 sessions"
           hint="Across strength, conditioning, and mobility."
-          trend={{ label: '+1 vs last week', positive: true }}
-          icon={<CalendarIcon />}
+          actionTo="/me"
+          actionLabel="Open my reserved events"
         />
         <StatsCard
           label="Community pulse"
           value="18 updates"
           hint="Posts, announcements, and coach notes."
-          trend={{ label: 'Healthy engagement', positive: true }}
-          icon={<WaveIcon />}
-        />
-        <StatsCard
-          label="Attendance streak"
-          value="6 weeks"
-          hint="Keep it gentle—recovery counts too."
-          icon={<LeafIcon />}
+          actionTo="/community"
+          actionLabel="Open community page"
         />
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        <section className="space-y-4 lg:col-span-2">
+      <div className="space-y-4">
+        <section className="space-y-4">
           <div className="flex items-end justify-between gap-4">
             <div>
               <h2 className="font-display text-xl text-fg">Upcoming events</h2>
-              <p className="mt-1 text-sm text-muted">Curated for Harbor Line members.</p>
             </div>
             <Link
               to="/events"
@@ -83,93 +82,54 @@ export function Dashboard() {
               View all
             </Link>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {upcoming.map((e) => (
-              <EventCard key={e.id} event={e} reservedByUser={reservedSet.has(e.id)} />
+              <details
+                key={e.id}
+                className="group overflow-hidden rounded-2xl border border-border bg-surface/90 shadow-card"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-fg">{e.title}</p>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
+                      <span>
+                        {new Intl.DateTimeFormat("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        }).format(new Date(e.startsAt))}
+                      </span>
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-accent transition group-open:rotate-180">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path
+                        d="M6 9l6 6 6-6"
+                        stroke="currentColor"
+                        strokeWidth="2.3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                </summary>
+                <div className="border-t border-border p-3">
+                  <EventCard
+                    event={e}
+                    reservedByUser={reservedSet.has(e.id)}
+                    hideTitle
+                    className="border-0 bg-transparent shadow-none"
+                  />
+                </div>
+              </details>
             ))}
           </div>
         </section>
 
-        <aside className="space-y-4">
-          <Card>
-            <CardBody className="space-y-4">
-              <div>
-                <h2 className="font-display text-lg text-fg">Recent activity</h2>
-                <p className="mt-1 text-xs text-muted">A quiet feed of meaningful moments.</p>
-              </div>
-              <ul className="space-y-3">
-                {activityFeed.map((a) => (
-                  <li key={a.id} className="rounded-xl border border-border bg-surface/40 p-3">
-                    <p className="text-sm text-fg-soft">
-                      <span className="font-semibold text-fg">{a.user}</span>{' '}
-                      <span className="text-muted">{a.action}</span>{' '}
-                      <span className="font-medium text-fg">{a.target}</span>
-                    </p>
-                    <p className="mt-1 text-[11px] font-semibold tracking-wide text-muted uppercase">
-                      {formatRelative(a.at)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-              <Button to="/community" variant="secondary" className="w-full">
-                Open community
-              </Button>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody className="space-y-3">
-              <p className="text-sm font-semibold text-fg">Coaches on deck</p>
-              <p className="text-xs text-muted">
-                Mira is prioritizing mobility resets; Noah is taking new strength assessments on
-                Thursdays.
-              </p>
-              <Button to="/events" variant="ghost" className="w-full justify-center">
-                Browse full schedule
-              </Button>
-            </CardBody>
-          </Card>
-        </aside>
       </div>
     </div>
-  )
+  );
 }
 
-function CalendarIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M7 3v3M17 3v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-function WaveIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M4 14c3-6 5 6 8 0s5 6 8-4"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-function LeafIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 21c6-6 6-14 6-14s-8 0-14 6c3 3 5 5 8 8Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}

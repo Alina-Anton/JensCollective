@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { GymEvent } from '@/data/mockData'
 import { formatMoney, spotsLeft } from '@/data/mockData'
-import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { ReserveButton } from '@/components/events/ReserveButton'
 import { cn } from '@/lib/cn'
@@ -19,43 +18,29 @@ export function EventCard({
   event,
   className,
   reservedByUser,
+  hideTitle = false,
 }: {
   event: GymEvent
   className?: string
   reservedByUser?: boolean
+  hideTitle?: boolean
 }) {
   const left = spotsLeft(event)
   const toast = useToast()
 
   return (
-    <Card className={cn('overflow-hidden transition hover:border-border-strong', className)}>
-      <div className="relative">
-        <div
-          className="h-28 w-full bg-gradient-to-br from-accent-soft via-secondary-soft to-page-bottom"
-          aria-hidden
-        />
-        <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_20%_0%,rgba(142,69,133,0.16),transparent_55%)]" />
-        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-          <Badge tone="neutral">{event.category}</Badge>
-          {left <= 0 ? (
-            <Badge tone="danger">Full</Badge>
-          ) : left <= 2 ? (
-            <Badge tone="warning">Few spots left</Badge>
-          ) : (
-            <Badge tone="success">{left} spots left</Badge>
-          )}
-        </div>
-      </div>
-
+    <Card className={cn('bg-surface overflow-hidden transition hover:border-border-strong', className)}>
       <div className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 space-y-2">
-            <Link
-              to={`/events/${event.id}`}
-              className="block font-display text-lg leading-snug tracking-tight text-fg decoration-transparent underline-offset-4 transition hover:underline hover:decoration-accent/50"
-            >
-              {event.title}
-            </Link>
+            {!hideTitle ? (
+              <Link
+                to={`/events/${event.id}`}
+                className="block font-display text-lg leading-snug tracking-tight text-fg decoration-transparent underline-offset-4 transition hover:underline hover:decoration-accent/50"
+              >
+                {event.title}
+              </Link>
+            ) : null}
             <p className="text-sm text-muted">{event.description}</p>
           </div>
           <div className="hidden shrink-0 text-right sm:block">
@@ -64,7 +49,7 @@ export function EventCard({
           </div>
         </div>
 
-        <dl className="grid gap-3 text-sm sm:grid-cols-3">
+        <dl className="grid gap-3 text-sm sm:grid-cols-4">
           <div>
             <dt className="text-xs font-semibold tracking-wide text-muted">When</dt>
             <dd className="mt-1 text-fg-soft">{formatRange(event.startsAt, event.endsAt)}</dd>
@@ -78,6 +63,12 @@ export function EventCard({
             <dd className="mt-1 text-fg-soft">
               {event.host.name}
               <span className="block text-xs text-muted">{event.host.title}</span>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold tracking-wide text-muted">Spots</dt>
+            <dd className="mt-1 text-fg-soft">
+              {left}/{event.maxSpots}
             </dd>
           </div>
         </dl>
