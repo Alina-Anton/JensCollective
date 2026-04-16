@@ -1,173 +1,205 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Avatar } from '@/components/ui/Avatar'
-import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
-import { activeMembers, communityPosts, events, trendingEventIds } from '@/data/mockData'
-import { formatMoney, spotsLeft } from '@/data/mockData'
+import { communityPosts, members } from '@/data/mockData'
 import { useToast } from '@/hooks/useToast'
 import { formatRelative } from '@/lib/format'
 
 export function Community() {
   const toast = useToast()
   const [draft, setDraft] = useState('')
+  const [openCommentsPostId, setOpenCommentsPostId] = useState<string | null>(null)
+  const [commentComposerPostId, setCommentComposerPostId] = useState<string | null>(null)
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({})
+
+  function getPostMessages(post: (typeof communityPosts)[number]) {
+    const commenterNames = members.map((m) => m.name).filter((name) => name !== post.author)
+    const commentBodiesByPost: Record<string, string[]> = {
+      p1: [
+        'I am in. I can stay after class on Friday.',
+        'Count me in for passing drills.',
+        'I can do three rounds before heading out.',
+        'Perfect timing, I wanted extra reps this week.',
+      ],
+      p2: [
+        'I am down. What time are we meeting?',
+        'Love this idea, I will join after class.',
+        'I can make Sunday and bring an extra coffee.',
+      ],
+      p3: [
+        'I would love one pair if still available.',
+        'Thanks for donating, this helps a lot.',
+        'Could you bring them on Wednesday evening?',
+      ],
+    }
+    const commentBodies = commentBodiesByPost[post.id] ?? ['Thanks for sharing this.']
+    return Array.from({ length: post.comments }, (_, i) => ({
+      id: `${post.id}-msg-${i + 1}`,
+      author: commenterNames[i % commenterNames.length] ?? 'Jordan Ellis',
+      body: commentBodies[i % commentBodies.length],
+    }))
+  }
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div className="min-w-0 space-y-2">
-          <p className="text-xs font-semibold tracking-[0.2em] text-muted uppercase">Community</p>
-          <h1 className="font-display text-3xl tracking-tight text-fg sm:text-4xl">Board</h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-muted">
-            Lightweight updates—no infinite scroll, no performative metrics. Just your gym, in
-            writing.
-          </p>
-        </div>
-        <Button to="/events" variant="secondary" className="sm:self-start">
-          See events
-        </Button>
-      </div>
+      <p className="max-w-2xl text-sm leading-relaxed text-muted">
+        Stay connected with your gym community—share wins, ask for support, and post updates so we
+        can keep each other motivated every week.
+      </p>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <h2 className="font-display text-lg text-fg">Post an update</h2>
-              <p className="mt-1 text-xs text-muted">Share wins, logistics, or thoughtful asks.</p>
-            </CardHeader>
-            <CardBody className="space-y-3">
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                rows={4}
-                placeholder="What’s on your mind? Keep it kind, specific, and easy to act on."
-                className="w-full resize-y rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-fg outline-none ring-white/0 transition placeholder:text-muted focus:border-accent/45 focus:ring-2 focus:ring-accent/20"
-              />
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-muted">Attachments and mentions ship in v2.</p>
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={() => {
-                    toast.push({
-                      variant: 'success',
-                      title: 'Update queued',
-                      description: 'In production, this would publish to members instantly.',
-                    })
-                    setDraft('')
-                  }}
-                >
-                  Publish update
-                </Button>
-              </div>
-            </CardBody>
-          </Card>
+      <div className="space-y-6">
+        <Card>
+          <CardBody className="space-y-3">
+            <h2 className="font-display text-lg text-fg">Post an update</h2>
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              rows={4}
+              placeholder="What’s on your mind? Keep it kind, specific, and easy to act on."
+              className="w-full resize-y rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-fg outline-none ring-white/0 transition placeholder:text-muted focus:border-accent/45 focus:ring-2 focus:ring-accent/20"
+            />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted">Attachments and mentions ship in v2.</p>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => {
+                  toast.push({
+                    variant: 'success',
+                    title: 'Update queued',
+                    description: 'In production, this would publish to members instantly.',
+                  })
+                  setDraft('')
+                }}
+              >
+                Publish update
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
 
-          <div className="space-y-4">
-            {communityPosts.map((p) => (
-              <Card key={p.id}>
-                <CardBody className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <Avatar initials={p.initials} title={p.author} />
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-fg">{p.author}</p>
-                          <Badge tone={p.role === 'Coach' ? 'accent' : p.role === 'Admin' ? 'warm' : 'neutral'}>
-                            {p.role}
-                          </Badge>
-                          {p.pinned ? <Badge tone="success">Pinned</Badge> : null}
-                        </div>
-                        <p className="mt-2 font-display text-xl tracking-tight text-fg">{p.title}</p>
-                        <p className="mt-2 text-sm leading-relaxed text-fg-soft">{p.body}</p>
-                      </div>
-                    </div>
-                    <p className="shrink-0 text-[11px] font-semibold tracking-wide text-muted">
-                      {formatRelative(p.at)}
-                    </p>
+        <div className="space-y-4">
+          {communityPosts.map((p) => (
+            <Card key={p.id}>
+              <CardBody className="space-y-3">
+                <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar initials={p.initials} title={p.author} />
+                    <p className="text-sm font-semibold text-fg">{p.author}</p>
                   </div>
-
-                  <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/40 px-3 py-1.5 text-xs font-semibold text-fg-soft transition hover:border-border-strong hover:text-fg"
-                      onClick={() =>
-                        toast.push({ variant: 'info', title: 'Thanks recorded', description: 'Mock reaction saved.' })
-                      }
-                    >
-                      <HeartIcon />
-                      Appreciate · {p.likes}
-                    </button>
-                    <span className="text-xs text-muted">{p.comments} comments (preview)</span>
-                  </div>
-                </CardBody>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        <aside className="space-y-4">
-          <Card>
-            <CardHeader>
-              <h2 className="font-display text-lg text-fg">Trending events</h2>
-              <p className="mt-1 text-xs text-muted">What members are circling this week.</p>
-            </CardHeader>
-            <CardBody className="space-y-3">
-              {trendingEventIds.map((id) => {
-                const e = events.find((x) => x.id === id)
-                if (!e) return null
-                const left = spotsLeft(e)
-                return (
-                  <Link
-                    key={id}
-                    to={`/events/${e.id}`}
-                    className="block rounded-2xl border border-border bg-surface/40 p-4 transition hover:border-border-strong hover:bg-surface-2"
-                  >
-                    <p className="text-sm font-semibold text-fg">{e.title}</p>
-                    <p className="mt-1 text-xs text-muted">
-                      {left} spots left · {formatMoney(e.priceCents)}
-                    </p>
-                  </Link>
-                )
-              })}
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <h2 className="font-display text-lg text-fg">Active members</h2>
-              <p className="mt-1 text-xs text-muted">A soft presence graph—privacy preserved.</p>
-            </CardHeader>
-            <CardBody className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex -space-x-2">
-                  {activeMembers.slice(0, 4).map((m) => (
-                    <Avatar key={m.name} initials={m.initials} title={m.name} className="ring-2 ring-surface" />
-                  ))}
+                  <p className="shrink-0 text-[11px] font-semibold tracking-wide text-muted">
+                    {formatRelative(p.at)}
+                  </p>
                 </div>
-                <Badge tone="neutral">Now · 18</Badge>
-              </div>
-              <p className="text-xs text-muted">
-                “Active” means engaged in the last 72 hours—attendance, posts, or reservations.
-              </p>
-            </CardBody>
-          </Card>
-        </aside>
+
+                <div className="space-y-2">
+                  <p className="font-display text-xl tracking-tight text-fg">{p.title}</p>
+                  <p className="text-sm leading-relaxed text-fg-soft">{p.body}</p>
+                </div>
+
+                <div className="pt-1">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => setCommentComposerPostId((id) => (id === p.id ? null : p.id))}
+                  >
+                    Add comment
+                  </Button>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-2 text-center">
+                  <span className="text-xs text-muted">{p.comments} comments</span>
+                  <button
+                    type="button"
+                    onClick={() => setOpenCommentsPostId((id) => (id === p.id ? null : p.id))}
+                    aria-label="Show all messages in this post"
+                    title={openCommentsPostId === p.id ? 'Hide messages' : 'Show all messages'}
+                    className="inline-flex h-5 w-5 items-center justify-center text-fg-soft transition hover:text-fg"
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden
+                      className={openCommentsPostId === p.id ? 'rotate-180 transition-transform' : 'transition-transform'}
+                    >
+                      <path
+                        d="M6 9l6 6 6-6"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                {commentComposerPostId === p.id ? (
+                  <div className="space-y-2 border-t border-border pt-3">
+                    <textarea
+                      rows={3}
+                      value={commentDrafts[p.id] ?? ''}
+                      onChange={(e) =>
+                        setCommentDrafts((prev) => ({
+                          ...prev,
+                          [p.id]: e.target.value,
+                        }))
+                      }
+                      placeholder="Write your comment..."
+                      className="w-full resize-y rounded-xl border border-border bg-surface px-3 py-2 text-sm text-fg outline-none ring-white/0 transition placeholder:text-muted focus:border-accent/45 focus:ring-2 focus:ring-accent/20"
+                    />
+                    <div className="flex w-full gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-8 w-full px-3 text-xs"
+                        onClick={() => {
+                          setCommentComposerPostId(null)
+                          setCommentDrafts((prev) => ({ ...prev, [p.id]: '' }))
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="h-8 w-full px-3 text-xs"
+                        onClick={() => {
+                          const value = (commentDrafts[p.id] ?? '').trim()
+                          if (!value) return
+                          toast.push({
+                            variant: 'success',
+                            title: 'Comment added',
+                            description: 'Your comment was posted.',
+                          })
+                          setCommentComposerPostId(null)
+                          setCommentDrafts((prev) => ({ ...prev, [p.id]: '' }))
+                        }}
+                      >
+                        Post
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {openCommentsPostId === p.id ? (
+                  <div className="space-y-2 border-t border-border pt-3">
+                    {getPostMessages(p).map((message) => (
+                      <div key={message.id} className="rounded-xl border border-border bg-surface/40 px-3 py-2">
+                        <p className="text-xs font-semibold text-fg">{message.author}</p>
+                        <p className="mt-1 text-xs text-fg-soft">{message.body}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </CardBody>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
-  )
-}
-
-function HeartIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 21s-7-4.35-10-9c-1.8-3.1-.6-7 3-8 2.1-.6 4.3.3 5 2.2.7-1.9 2.9-2.8 5-2.2 3.6 1 4.8 5 3 8-3 4.65-10 9-10 9Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-    </svg>
   )
 }

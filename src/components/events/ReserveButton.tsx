@@ -47,8 +47,13 @@ export function ReserveButton({
 
   if (state === 'reserved') {
     return (
-      <Button variant="secondary" disabled className={cn('w-full sm:w-auto', className)}>
-        Spot reserved
+      <Button
+        variant="secondary"
+        type="button"
+        className={cn('w-full sm:w-auto', className)}
+        onClick={() => setState('idle')}
+      >
+        Cancel my reservation
       </Button>
     )
   }

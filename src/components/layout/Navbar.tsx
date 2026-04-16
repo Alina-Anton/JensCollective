@@ -1,19 +1,26 @@
-import { useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
-import { Logo } from '@/components/brand/Logo'
-import { Avatar } from '@/components/ui/Avatar'
-import { currentUser } from '@/data/mockData'
-import { cn } from '@/lib/cn'
+import { useEffect, useState } from "react";
+import { Link, NavLink } from "react-router-dom";
+import { Logo } from "@/components/brand/Logo";
+import { Avatar } from "@/components/ui/Avatar";
+import { currentUser } from "@/data/mockData";
+import { cn } from "@/lib/cn";
+import { getProfileAvatarUrl, subscribeProfileAvatar } from "@/lib/profileAvatarStorage";
 
 const links = [
-  { to: '/', label: 'Home' },
-  { to: '/events', label: 'Events' },
-  { to: '/community', label: 'Community' },
-  { to: '/me', label: 'Reservations' },
-]
+  { to: "/", label: "Home" },
+  { to: "/events", label: "Events" },
+  { to: "/members", label: "Memebers" },
+  { to: "/community", label: "Feed" },
+  { to: "/me/reservations", label: "Reservations" },
+];
 
 export function Navbar() {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(() => getProfileAvatarUrl());
+
+  useEffect(() => {
+    return subscribeProfileAvatar(() => setAvatarSrc(getProfileAvatarUrl()));
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/80 backdrop-blur-xl">
@@ -37,11 +44,11 @@ export function Navbar() {
               to={l.to}
               className={({ isActive }) =>
                 cn(
-                  'rounded-xl px-3 py-2 text-sm font-medium text-fg-soft transition hover:bg-surface-2 hover:text-fg',
-                  isActive && 'bg-surface-2 text-fg ring-1 ring-accent/15',
+                  "rounded-xl px-3 py-2 text-sm font-medium text-fg-soft transition hover:bg-surface-2 hover:text-fg",
+                  isActive && "bg-surface-2 text-fg ring-1 ring-accent/15",
                 )
               }
-              end={l.to === '/'}
+              end={l.to === "/"}
             >
               {l.label}
             </NavLink>
@@ -63,10 +70,15 @@ export function Navbar() {
             <BellIcon />
           </Link>
           <Link
-            to="/me"
+            to="/me/profile"
             className="inline-flex items-center gap-2 px-0 py-0.5 transition"
           >
-            <Avatar initials={currentUser.initials} title={currentUser.name} className="size-8" />
+            <Avatar
+              initials={currentUser.initials}
+              src={(avatarSrc ?? currentUser.avatarUrl) || undefined}
+              title={currentUser.name}
+              className="size-8"
+            />
             <span className="hidden max-w-[9rem] truncate pr-1 text-xs font-semibold text-fg-soft sm:block">
               {currentUser.name}
             </span>
@@ -84,11 +96,11 @@ export function Navbar() {
                 onClick={() => setOpen(false)}
                 className={({ isActive }) =>
                   cn(
-                    'rounded-xl px-3 py-2 text-sm font-semibold text-fg-soft hover:bg-surface-2',
-                    isActive && 'bg-surface-2 text-fg',
+                    "rounded-xl px-3 py-2 text-sm font-semibold text-fg-soft hover:bg-surface-2",
+                    isActive && "bg-surface-2 text-fg",
                   )
                 }
-                end={l.to === '/'}
+                end={l.to === "/"}
               >
                 {l.label}
               </NavLink>
@@ -101,7 +113,7 @@ export function Navbar() {
               Notifications
             </Link>
             <Link
-              to="/me"
+              to="/me/profile"
               onClick={() => setOpen(false)}
               className="rounded-xl px-3 py-2 text-sm font-semibold text-fg-soft hover:bg-surface-2"
             >
@@ -111,7 +123,7 @@ export function Navbar() {
         </div>
       ) : null}
     </header>
-  )
+  );
 }
 
 function BellIcon() {
@@ -129,21 +141,31 @@ function BellIcon() {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 function MenuIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path
+        d="M5 7h14M5 12h14M5 17h14"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
     </svg>
-  )
+  );
 }
 
 function CloseIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M7 7l10 10M17 7 7 17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path
+        d="M7 7l10 10M17 7 7 17"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
     </svg>
-  )
+  );
 }

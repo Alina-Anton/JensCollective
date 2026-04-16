@@ -47,9 +47,14 @@ export function Dashboard() {
             waitlist, and a community note pinned for Saturday.
           </p>
         </div>
-        <Button to="/events/new" variant="primary" className="sm:self-start">
-          Create event
-        </Button>
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:items-end">
+          <Button to="/events/new" variant="primary" className="w-full sm:w-auto">
+            Create event
+          </Button>
+          <Button to="/community" variant="secondary" className="w-full sm:w-auto">
+            Post update
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -57,13 +62,13 @@ export function Dashboard() {
           label="My bookings"
           value="4 sessions"
           hint="Across strength, conditioning, and mobility."
-          actionTo="/me"
+          actionTo="/me/reservations"
           actionLabel="Open my reserved events"
         />
         <StatsCard
           label="Community pulse"
-          value="18 updates"
-          hint="Posts, announcements, and coach notes."
+          value="18 new updates"
+          hint="Posts, announcements, and coach notes you have not read yet."
           actionTo="/community"
           actionLabel="Open community page"
         />
@@ -71,13 +76,11 @@ export function Dashboard() {
 
       <div className="space-y-4">
         <section className="space-y-4">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <h2 className="font-display text-xl text-fg">Upcoming events</h2>
-            </div>
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="font-display text-xl text-fg">Upcoming events</h2>
             <Link
               to="/events"
-              className="text-sm font-semibold text-accent hover:text-[color-mix(in_oklab,var(--color-accent)_85%,white)]"
+              className="shrink-0 text-sm font-semibold text-accent hover:text-[color-mix(in_oklab,var(--color-accent)_85%,white)]"
             >
               View all
             </Link>

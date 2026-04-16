@@ -189,36 +189,34 @@ export const communityPosts: CommunityPost[] = [
     id: 'p1',
     author: 'Mira Chen',
     initials: 'MC',
-    role: 'Coach',
-    title: 'April focus: sustainable intensity',
-    body: 'We are dialing volume slightly down and sharpening execution windows. If you feel “flat,” talk to a coach after class—we can tune loads without losing progress.',
+    role: 'Member',
+    title: 'Who is down to drill this Friday after class?',
+    body: 'I can stay for 30-40 minutes and work guard passing rounds if anyone wants to join.',
     at: '2026-04-13T12:05:00.000Z',
-    likes: 38,
-    comments: 6,
-    pinned: true,
+    likes: 18,
+    comments: 4,
   },
   {
     id: 'p2',
     author: 'Jordan Ellis',
     initials: 'JE',
     role: 'Member',
-    title: 'Partner for Saturday social?',
-    body: 'Planning to swing by around 9:45. Would love to split an Uber from the north loop if anyone is nearby.',
+    title: "Let's do a coffee walk on Sunday",
+    body: 'Thinking right after the morning class. Easy pace, around 45 minutes.',
     at: '2026-04-12T21:16:00.000Z',
-    likes: 12,
-    comments: 4,
+    likes: 15,
+    comments: 3,
   },
   {
     id: 'p3',
-    author: 'Ops · GymBoard',
-    initials: 'GB',
-    role: 'Admin',
-    title: 'Maintenance window · Tuesday 1–3am',
-    body: 'Member portal will be briefly unavailable while we ship a payments upgrade. Reservations already placed will remain intact.',
+    author: 'Alex Kim',
+    initials: 'AK',
+    role: 'Member',
+    title: 'I have extra GI pants for donation. Who wants it?',
+    body: 'Two pairs, lightly used, size A2. Happy to bring them to class this week.',
     at: '2026-04-11T16:02:00.000Z',
-    likes: 9,
-    comments: 1,
-    pinned: true,
+    likes: 11,
+    comments: 3,
   },
 ]
 
@@ -239,6 +237,39 @@ export const activeMembers = [
   { name: 'Avery Brooks', initials: 'AB' },
 ]
 
+export const members = [
+  { name: 'Jordan Ellis', initials: 'JE', avatarUrl: '' },
+  { name: 'Sam Rivera', initials: 'SR', avatarUrl: '' },
+  { name: 'Priya Shah', initials: 'PS', avatarUrl: '' },
+  { name: 'Leo Martin', initials: 'LM', avatarUrl: '' },
+  { name: 'Noah Patel', initials: 'NP', avatarUrl: '' },
+  { name: 'Avery Brooks', initials: 'AB', avatarUrl: '' },
+  { name: 'Mira Chen', initials: 'MC', avatarUrl: '' },
+  { name: 'Alex Kim', initials: 'AK', avatarUrl: '' },
+  { name: 'Maya Johnson', initials: 'MJ', avatarUrl: '' },
+  { name: 'Chris Turner', initials: 'CT', avatarUrl: '' },
+  { name: 'Daniel Park', initials: 'DP', avatarUrl: '' },
+  { name: 'Emma Wilson', initials: 'EW', avatarUrl: '' },
+  { name: 'Olivia Stone', initials: 'OS', avatarUrl: '' },
+  { name: 'Nathan Cole', initials: 'NC', avatarUrl: '' },
+  { name: 'Zoe Bennett', initials: 'ZB', avatarUrl: '' },
+  { name: 'Ryan Lopez', initials: 'RL', avatarUrl: '' },
+  { name: 'Sophia Reed', initials: 'SR', avatarUrl: '' },
+  { name: 'Liam Brooks', initials: 'LB', avatarUrl: '' },
+  { name: 'Ella Martinez', initials: 'EM', avatarUrl: '' },
+  { name: 'Mason Clark', initials: 'MC', avatarUrl: '' },
+  { name: 'Harper Young', initials: 'HY', avatarUrl: '' },
+  { name: 'Ethan Hughes', initials: 'EH', avatarUrl: '' },
+  { name: 'Aria Scott', initials: 'AS', avatarUrl: '' },
+  { name: 'Logan Price', initials: 'LP', avatarUrl: '' },
+  { name: 'Isla Moore', initials: 'IM', avatarUrl: '' },
+  { name: 'Caleb Foster', initials: 'CF', avatarUrl: '' },
+  { name: 'Nora Perry', initials: 'NP', avatarUrl: '' },
+  { name: 'Owen Diaz', initials: 'OD', avatarUrl: '' },
+  { name: 'Grace Watson', initials: 'GW', avatarUrl: '' },
+  { name: 'Henry Sullivan', initials: 'HS', avatarUrl: '' },
+]
+
 export function getEventById(id: string) {
   return events.find((e) => e.id === id)
 }
@@ -248,8 +279,7 @@ export function spotsLeft(ev: GymEvent) {
 }
 
 export function formatMoney(cents: number | null) {
-  if (cents === null) return 'Included'
-  if (cents === 0) return 'Free'
+  if (cents === null || cents === 0) return 'Free'
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
     cents / 100,
   )
