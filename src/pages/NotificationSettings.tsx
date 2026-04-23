@@ -82,7 +82,7 @@ export function NotificationSettings() {
         </CardHeader>
         <CardBody className="space-y-3">
           <Toggle
-            label="Reminders before class"
+            label="Reminders before events"
             description="Default: 24 hours and 1 hour. Quiet hours respected (10pm–7am)."
             checked={remindersOn}
             onChange={(e) => setRemindersOn(e.target.checked)}
@@ -94,8 +94,8 @@ export function NotificationSettings() {
             onChange={(e) => setConfirmOn(e.target.checked)}
           />
           <Toggle
-            label="Cancellations & room changes"
-            description="If a coach cancels or moves a session, you will be notified immediately."
+            label="Cancellations"
+            description="If there are any cancelations or reschedules, you will be notified immediately."
             checked={cancelOn}
             onChange={(e) => setCancelOn(e.target.checked)}
           />

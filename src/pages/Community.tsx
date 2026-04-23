@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
-import { Card, CardBody, CardHeader } from '@/components/ui/Card'
+import { Card, CardBody } from '@/components/ui/Card'
 import { communityPosts, members } from '@/data/mockData'
 import { useToast } from '@/hooks/useToast'
 import { formatRelative } from '@/lib/format'

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { EventCategory } from '@/data/mockData'
 import { events, reservations } from '@/data/mockData'
 import { EventCard } from '@/components/events/EventCard'
@@ -76,44 +77,30 @@ export function EventsBoard() {
         filtered.length > 3 ? (
           <div className="space-y-3">
             {filtered.map((e) => (
-              <details
+              <div
                 key={e.id}
-                className="group overflow-hidden rounded-2xl border border-border bg-surface/90 shadow-card"
+                className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface/90 px-4 py-3 shadow-card"
               >
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-fg">{e.title}</p>
-                    <p className="mt-0.5 text-xs text-muted">
-                      {new Intl.DateTimeFormat('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      }).format(new Date(e.startsAt))}
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-accent transition group-open:rotate-180">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                      <path
-                        d="M6 9l6 6 6-6"
-                        stroke="currentColor"
-                        strokeWidth="2.3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </span>
-                </summary>
-                <div className="border-t border-border p-3">
-                  <EventCard
-                    event={e}
-                    reservedByUser={reservedSet.has(e.id)}
-                    hideTitle
-                    className="border-0 bg-transparent shadow-none"
-                  />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-fg">{e.title}</p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {new Intl.DateTimeFormat('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    }).format(new Date(e.startsAt))}
+                  </p>
                 </div>
-              </details>
+                <Link
+                  to={`/events/${e.id}`}
+                  aria-label={`View event ${e.title}`}
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface-2/60 text-fg-soft transition hover:border-border-strong hover:text-fg"
+                >
+                  {'>'}
+                </Link>
+              </div>
             ))}
           </div>
         ) : (
