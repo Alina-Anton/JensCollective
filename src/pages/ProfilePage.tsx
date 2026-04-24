@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
-import { currentUser } from "@/data/mockData";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/useToast";
+import { messageForAuthError } from "@/lib/authErrors";
+import { displayNameForUser, initialsForUser } from "@/lib/userDisplay";
 import {
   getProfileAvatarUrl,
   setProfileAvatarUrl,
@@ -18,9 +22,15 @@ function Field({ label, value }: { label: string; value: string }) {
 }
 
 export function ProfilePage() {
-  const [preferredName, setPreferredName] = useState(currentUser.name);
-  const [preferredNameDraft, setPreferredNameDraft] = useState(
-    currentUser.name,
+  const { user, signOutUser, sendPasswordReset } = useAuth();
+  const navigate = useNavigate();
+  const toast = useToast();
+
+  const [preferredName, setPreferredName] = useState(() =>
+    displayNameForUser(user),
+  );
+  const [preferredNameDraft, setPreferredNameDraft] = useState(() =>
+    displayNameForUser(user),
   );
   const [phone, setPhone] = useState("+1 (415) 555-0192");
   const [phoneDraft, setPhoneDraft] = useState(phone);
@@ -69,7 +79,7 @@ export function ProfilePage() {
     reader.readAsDataURL(file);
   }
 
-  const avatarSrc = (avatarDataUrl ?? currentUser.avatarUrl) || undefined;
+  const avatarSrc = (avatarDataUrl ?? user?.photoURL) || undefined;
 
   useEffect(() => {
     if (!editingProfile || !aboutInputRef.current) return;
@@ -77,6 +87,8 @@ export function ProfilePage() {
     el.style.height = "0px";
     el.style.height = `${el.scrollHeight}px`;
   }, [aboutDraft, editingProfile]);
+
+  if (!user) return null;
 
   return (
     <div className="space-y-8">
@@ -91,9 +103,9 @@ export function ProfilePage() {
             <div className="flex flex-wrap items-start gap-4">
               <div className="relative">
                 <Avatar
-                  initials={currentUser.initials}
+                  initials={initialsForUser(user)}
                   src={avatarSrc}
-                  title={currentUser.name}
+                  title={displayNameForUser(user)}
                   className="size-14 text-base"
                 />
                 {editingProfile ? (
@@ -154,7 +166,7 @@ export function ProfilePage() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-lg font-semibold text-fg">{preferredName}</p>
-                <p className="text-sm text-muted">{currentUser.email}</p>
+                <p className="text-sm text-muted">{user.email ?? "—"}</p>
               </div>
               <input
                 ref={avatarFileRef}
@@ -340,13 +352,54 @@ export function ProfilePage() {
             <h2 className="font-display text-lg text-fg">Account</h2>
           </CardHeader>
           <CardBody className="space-y-3">
-            <Button variant="secondary" className="w-full">
+            <Field label="Sign-in email" value={user.email ?? "—"} />
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={async () => {
+                await signOutUser();
+                navigate("/sign-in", { replace: true });
+              }}
+            >
               Log out
             </Button>
-            <Button variant="secondary" className="w-full">
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={async () => {
+                const em = user.email;
+                if (!em) return;
+                try {
+                  await sendPasswordReset(em);
+                  toast.push({
+                    variant: "success",
+                    title: "Check your inbox",
+                    description:
+                      "We sent a password reset link to your email address.",
+                  });
+                } catch (err) {
+                  toast.push({
+                    variant: "error",
+                    title: "Could not send reset email",
+                    description: messageForAuthError(err),
+                  });
+                }
+              }}
+            >
               Change password
             </Button>
-            <Button variant="danger" className="w-full">
+            <Button
+              variant="danger"
+              className="w-full"
+              onClick={() =>
+                toast.push({
+                  variant: "error",
+                  title: "Not available in the app",
+                  description:
+                    "To delete your account, contact your gym admin or support.",
+                })
+              }
+            >
               Delete account
             </Button>
           </CardBody>

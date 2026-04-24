@@ -4,11 +4,10 @@ import { StatsCard } from "@/components/dashboard/StatsCard";
 import { EventCard } from "@/components/events/EventCard";
 import { Button } from "@/components/ui/Button";
 import { DashboardSkeleton } from "@/components/ui/Skeleton";
-import {
-  currentUser,
-  events,
-  reservations,
-} from "@/data/mockData";
+import { useAuth } from "@/hooks/useAuth";
+import { displayNameForUser } from "@/lib/userDisplay";
+import { getMergedEvents, reservations } from "@/data/mockData";
+import { subscribeUserCreatedEvents } from "@/lib/userCreatedEvents";
 
 const reservedSet = new Set(
   reservations
@@ -17,21 +16,30 @@ const reservedSet = new Set(
 );
 
 export function Dashboard() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [catalogVersion, setCatalogVersion] = useState(0);
 
   useEffect(() => {
     const t = window.setTimeout(() => setLoading(false), 780);
     return () => window.clearTimeout(t);
   }, []);
 
+  useEffect(() => subscribeUserCreatedEvents(() => setCatalogVersion((v) => v + 1)), []);
+
+  const mergedEvents = useMemo(() => {
+    void catalogVersion;
+    return getMergedEvents();
+  }, [catalogVersion]);
+
   const upcoming = useMemo(() => {
-    return [...events]
+    return [...mergedEvents]
       .sort(
         (a, b) =>
           new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
       )
       .slice(0, 3);
-  }, []);
+  }, [mergedEvents]);
 
   if (loading) return <DashboardSkeleton />;
 
@@ -40,7 +48,7 @@ export function Dashboard() {
       <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
         <div className="min-w-0 space-y-2">
           <h1 className="font-display text-3xl tracking-tight text-fg sm:text-4xl">
-            Good evening, {currentUser.name.split(" ")[0]}
+            Good evening, {displayNameForUser(user).split(" ")[0] ?? "there"}
           </h1>
           <p className="max-w-2xl text-sm leading-relaxed text-muted">
             Your week is shaping up thoughtfully—two reservations confirmed, one

@@ -1,25 +1,36 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Logo } from '@/components/brand/Logo'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { useAuth } from '@/hooks/useAuth'
+import { getAuthMode } from '@/lib/authMode'
+import { messageForAuthError } from '@/lib/authErrors'
+import { firebaseConsoleAuthenticationUrl } from '@/lib/firebase'
 import { useToast } from '@/hooks/useToast'
 
 export function SignUp() {
+  const navigate = useNavigate()
   const toast = useToast()
+  const { user, signUpWithEmail } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [agreed, setAgreed] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
 
-  function onSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    if (user) navigate('/', { replace: true })
+  }, [user, navigate])
+
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     const next: Record<string, string> = {}
     if (name.trim().length < 2) next.name = 'Please enter your full name.'
     if (!email.includes('@')) next.email = 'Please enter a valid email address.'
-    if (password.length < 10)
-      next.password = 'Use at least 10 characters, including a number and symbol.'
+    if (password.length < 8) next.password = 'Use at least 8 characters.'
+    if (!agreed) next.agreed = 'Please confirm you agree to the member guidelines.'
     setErrors(next)
     if (Object.keys(next).length) {
       toast.push({
@@ -30,14 +41,23 @@ export function SignUp() {
       return
     }
     setLoading(true)
-    window.setTimeout(() => {
-      setLoading(false)
+    try {
+      await signUpWithEmail(email, password, name.trim())
       toast.push({
         variant: 'success',
-        title: 'Invite request received',
-        description: 'GymBoard is private—an admin will confirm your membership shortly.',
+        title: 'Account created',
+        description: 'You are signed in. Welcome to Jen’s Collective.',
       })
-    }, 950)
+      navigate('/', { replace: true })
+    } catch (err) {
+      toast.push({
+        variant: 'error',
+        title: 'Could not create account',
+        description: messageForAuthError(err),
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -49,10 +69,26 @@ export function SignUp() {
 
         <div className="rounded-2xl border border-border bg-surface/95 p-6 shadow-card backdrop-blur-sm sm:p-8">
           <div className="space-y-1 text-center">
-            <h1 className="font-display text-2xl tracking-tight text-fg">Request access</h1>
+            <h1 className="font-display text-2xl tracking-tight text-fg">Create your account</h1>
             <p className="text-sm text-muted">
-              GymBoard is invite-only. Tell us who you are—we will route this to your gym admin.
+              Use your email and a strong password. Accounts are stored in this browser only (local
+              mode) unless your host sets Firebase auth.
             </p>
+            {getAuthMode() === 'firebase' ? (
+              <p className="mt-3 text-left text-xs leading-relaxed text-muted">
+                First-time Firebase setup: open{' '}
+                <a
+                  href={firebaseConsoleAuthenticationUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-accent underline-offset-2 hover:underline"
+                >
+                  Authentication in the Firebase console
+                </a>
+                , choose <span className="text-fg-soft">Get started</span> if prompted, then enable{' '}
+                <span className="text-fg-soft">Email/Password</span> under Sign-in method.
+              </p>
+            ) : null}
           </div>
 
           <form className="mt-8 space-y-4 text-left" onSubmit={onSubmit}>
@@ -73,7 +109,7 @@ export function SignUp() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               error={errors.email}
-              hint="Prefer your personal email—less likely to change jobs."
+              hint="This is the email you will use to sign in."
             />
             <Input
               label="Password"
@@ -83,10 +119,16 @@ export function SignUp() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               error={errors.password}
+              hint="At least 8 characters."
             />
 
             <label className="flex items-start gap-3 rounded-xl border border-border bg-surface/40 p-3 text-xs text-muted">
-              <input type="checkbox" className="mt-0.5 size-4 rounded border-border bg-surface accent-accent" />
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5 size-4 rounded border-border bg-surface accent-accent"
+              />
               <span>
                 I agree to the{' '}
                 <button type="button" className="font-semibold text-fg-soft hover:text-fg">
@@ -95,9 +137,10 @@ export function SignUp() {
                 and understand Jen’s Collective is for verified members only.
               </span>
             </label>
+            {errors.agreed ? <p className="text-xs font-medium text-danger">{errors.agreed}</p> : null}
 
             <Button type="submit" className="w-full" loading={loading}>
-              Submit request
+              Create account
             </Button>
 
             <div className="flex items-center gap-3 py-1">
@@ -108,7 +151,18 @@ export function SignUp() {
               <span className="h-px flex-1 bg-border-strong" />
             </div>
 
-            <Button type="button" variant="secondary" className="w-full">
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full"
+              onClick={() =>
+                toast.push({
+                  variant: 'error',
+                  title: 'Not available yet',
+                  description: 'Google sign-in is not enabled. Use email and password.',
+                })
+              }
+            >
               <span className="inline-flex items-center gap-2">
                 <GoogleMark />
                 Continue with Google
@@ -117,7 +171,7 @@ export function SignUp() {
           </form>
 
           <p className="mt-6 text-center text-xs text-muted">
-            Already approved?{' '}
+            Already have an account?{' '}
             <Link className="font-semibold text-fg-soft hover:text-fg" to="/sign-in">
               Sign in
             </Link>

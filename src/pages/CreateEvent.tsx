@@ -1,45 +1,73 @@
-import { useState } from 'react'
+import type { FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
-import { Badge } from '@/components/ui/Badge'
+import type { GymEvent } from '@/data/mockData'
+import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/useToast'
+import {
+  appendUserCreatedEvent,
+  localDateTimeToIsoRange,
+  parseCategory,
+} from '@/lib/userCreatedEvents'
+import { displayNameForUser, initialsForUser } from '@/lib/userDisplay'
+
+function buildGymEventFromForm(fd: FormData, host: GymEvent['host']): GymEvent {
+  const title = String(fd.get('title') ?? '').trim()
+  const description = String(fd.get('description') ?? '').trim()
+  const dateStr = String(fd.get('date') ?? '')
+  const timeStr = String(fd.get('time') ?? '')
+  const location = String(fd.get('location') ?? '').trim()
+  const spots = Number(fd.get('spots'))
+  const maxSpots = Number.isFinite(spots) && spots > 0 ? Math.floor(spots) : 10
+  const priceRaw = fd.get('price')
+  const priceNum = priceRaw === null || priceRaw === '' ? null : Number(priceRaw)
+  const priceCents =
+    priceNum !== null && Number.isFinite(priceNum) ? Math.round(priceNum * 100) : null
+  const category = parseCategory(String(fd.get('category') ?? 'Mobility'))
+  const { startsAt, endsAt } = localDateTimeToIsoRange(dateStr, timeStr)
+
+  return {
+    id: `evt-local-${crypto.randomUUID()}`,
+    title,
+    description,
+    longDescription: description,
+    startsAt,
+    endsAt,
+    location,
+    host,
+    priceCents,
+    maxSpots,
+    reservedCount: 0,
+    category,
+    waitlistEnabled: true,
+    imageHint: 'community session',
+  }
+}
 
 export function CreateEvent() {
-  const [submitted, setSubmitted] = useState(false)
+  const toast = useToast()
+  const navigate = useNavigate()
+  const { user } = useAuth()
 
-  if (submitted) {
-    return (
-      <div className="mx-auto max-w-xl space-y-6">
-        <Button to="/events" variant="ghost" className="h-10 px-3">
-          ← Back to board
-        </Button>
-        <Card className="overflow-hidden">
-          <div className="relative">
-            <div className="h-28 bg-gradient-to-br from-accent-soft via-secondary-soft to-page-bottom" />
-            <div className="absolute inset-0 bg-[radial-gradient(700px_circle_at_20%_0%,rgba(142,69,133,0.26),transparent_55%)]" />
-          </div>
-          <CardBody className="space-y-4 pt-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="success">Published</Badge>
-              <Badge tone="neutral">Members notified</Badge>
-            </div>
-            <h1 className="font-display text-3xl tracking-tight text-fg">Event is live</h1>
-            <p className="text-sm leading-relaxed text-muted">
-              Your session is now visible on the board with realistic placeholder scheduling. In
-              production, GymBoard would queue emails, SMS reminders, and calendar holds.
-            </p>
-            <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-              <Button to="/events" variant="primary" className="sm:flex-1">
-                View on board
-              </Button>
-              <Button to="/" variant="secondary" className="sm:flex-1">
-                Return home
-              </Button>
-            </div>
-          </CardBody>
-        </Card>
-      </div>
-    )
+  function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+    const host: GymEvent['host'] = user
+      ? {
+          name: displayNameForUser(user),
+          title: 'Organizer',
+          initials: initialsForUser(user),
+        }
+      : { name: 'Host', title: 'Organizer', initials: 'HO' }
+    const event = buildGymEventFromForm(fd, host)
+    appendUserCreatedEvent(event)
+    toast.push({
+      variant: 'success',
+      title: 'Event is live and visible now on the event board',
+    })
+    navigate('/events', { replace: true })
   }
 
   return (
@@ -59,13 +87,7 @@ export function CreateEvent() {
         </p>
       </div>
 
-      <form
-        className="mx-auto max-w-3xl"
-        onSubmit={(e) => {
-          e.preventDefault()
-          window.setTimeout(() => setSubmitted(true), 450)
-        }}
-      >
+      <form className="mx-auto max-w-3xl" onSubmit={onSubmit}>
         <Card>
           <CardHeader>
             <h2 className="font-display text-lg text-fg">Details</h2>

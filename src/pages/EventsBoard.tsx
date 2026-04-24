@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { EventCategory } from '@/data/mockData'
-import { events, reservations } from '@/data/mockData'
+import { getMergedEvents, reservations } from '@/data/mockData'
+import { subscribeUserCreatedEvents } from '@/lib/userCreatedEvents'
 import { EventCard } from '@/components/events/EventCard'
 import { FilterBar } from '@/components/events/FilterBar'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -31,18 +32,26 @@ export function EventsBoard() {
   const [category, setCategory] = useState<EventCategory | 'All'>('All')
   const [datePreset, setDatePreset] = useState<'any' | 'week' | 'today'>('any')
   const [busy, setBusy] = useState(true)
+  const [catalogVersion, setCatalogVersion] = useState(0)
 
   useEffect(() => {
     const t = window.setTimeout(() => setBusy(false), 520)
     return () => window.clearTimeout(t)
   }, [])
 
+  useEffect(() => subscribeUserCreatedEvents(() => setCatalogVersion((v) => v + 1)), [])
+
+  const allEvents = useMemo(() => {
+    void catalogVersion
+    return getMergedEvents()
+  }, [catalogVersion])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     const sod = startOfDay(new Date())
     const eow = endOfWeek(new Date())
 
-    return events.filter((e) => {
+    return allEvents.filter((e) => {
       if (category !== 'All' && e.category !== category) return false
       const start = new Date(e.startsAt).getTime()
       if (datePreset === 'today') {
@@ -55,7 +64,7 @@ export function EventsBoard() {
       const hay = `${e.title} ${e.description} ${e.location} ${e.host.name} ${e.category}`.toLowerCase()
       return hay.includes(q)
     })
-  }, [query, category, datePreset])
+  }, [query, category, datePreset, allEvents])
 
   return (
     <div className="space-y-8">

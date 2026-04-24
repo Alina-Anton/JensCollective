@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
@@ -15,10 +15,6 @@ export function MembersPage() {
     const q = query.trim().toLowerCase()
     if (!q) return members
     return members.filter((member) => member.name.toLowerCase().includes(q))
-  }, [query])
-
-  useEffect(() => {
-    setPage(1)
   }, [query])
 
   const totalPages = Math.max(1, Math.ceil(filteredMembers.length / MEMBERS_PER_PAGE))
@@ -40,7 +36,10 @@ export function MembersPage() {
             <h2 className="font-display text-lg text-fg">All members</h2>
             <input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                setPage(1)
+              }}
               placeholder="Search by name..."
               className="h-10 w-full rounded-xl border border-border bg-surface px-3 text-sm text-fg outline-none transition placeholder:text-muted focus:border-accent/45 focus:ring-2 focus:ring-accent/20 sm:w-64"
             />

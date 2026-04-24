@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Logo } from "@/components/brand/Logo";
 import { Avatar } from "@/components/ui/Avatar";
-import { currentUser } from "@/data/mockData";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/cn";
+import { displayNameForUser, initialsForUser } from "@/lib/userDisplay";
 import { getProfileAvatarUrl, subscribeProfileAvatar } from "@/lib/profileAvatarStorage";
 
 const links = [
@@ -15,6 +16,7 @@ const links = [
 ];
 
 export function Navbar() {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [avatarSrc, setAvatarSrc] = useState<string | null>(() => getProfileAvatarUrl());
 
@@ -74,13 +76,13 @@ export function Navbar() {
             className="inline-flex items-center gap-2 px-0 py-0.5 transition"
           >
             <Avatar
-              initials={currentUser.initials}
-              src={(avatarSrc ?? currentUser.avatarUrl) || undefined}
-              title={currentUser.name}
+              initials={initialsForUser(user)}
+              src={(avatarSrc ?? user?.photoURL) || undefined}
+              title={displayNameForUser(user)}
               className="size-8"
             />
             <span className="hidden max-w-[9rem] truncate pr-1 text-xs font-semibold text-fg-soft sm:block">
-              {currentUser.name}
+              {displayNameForUser(user)}
             </span>
           </Link>
         </div>

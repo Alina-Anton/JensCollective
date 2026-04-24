@@ -1,10 +1,14 @@
 import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
+import { useAuth } from '@/hooks/useAuth'
 import { getEventById, reservations, formatMoney, spotsLeft } from '@/data/mockData'
 
 export function ReservationsPage() {
+  const navigate = useNavigate()
+  const { signOutUser } = useAuth()
   const upcoming = useMemo(() => {
     return reservations
       .filter((r) => r.status === 'confirmed' || r.status === 'waitlist')
@@ -32,8 +36,16 @@ export function ReservationsPage() {
         <p className="max-w-2xl text-sm leading-relaxed text-muted">
           Keep your training rhythm visible—upcoming sessions and history you can trust.
         </p>
-        <Button to="/sign-in" variant="secondary" className="sm:self-start">
-          Switch account (demo)
+        <Button
+          type="button"
+          variant="secondary"
+          className="sm:self-start"
+          onClick={async () => {
+            await signOutUser()
+            navigate('/sign-in', { replace: true })
+          }}
+        >
+          Sign out
         </Button>
       </div>
 

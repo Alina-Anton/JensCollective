@@ -1,3 +1,5 @@
+import { getUserCreatedEventById, getUserCreatedEvents } from '@/lib/userCreatedEvents'
+
 export type EventCategory =
   | 'Strength'
   | 'Conditioning'
@@ -270,8 +272,16 @@ export const members = [
   { name: 'Henry Sullivan', initials: 'HS', avatarUrl: '' },
 ]
 
+/** Seed events plus any created in this browser (localStorage). */
+export function getMergedEvents(): GymEvent[] {
+  const extra = getUserCreatedEvents()
+  return [...extra, ...events].sort(
+    (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+  )
+}
+
 export function getEventById(id: string) {
-  return events.find((e) => e.id === id)
+  return getUserCreatedEventById(id) ?? events.find((e) => e.id === id)
 }
 
 export function spotsLeft(ev: GymEvent) {

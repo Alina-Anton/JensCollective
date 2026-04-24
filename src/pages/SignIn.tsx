@@ -1,19 +1,32 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Logo } from '@/components/brand/Logo'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { useAuth } from '@/hooks/useAuth'
+import { getAuthMode } from '@/lib/authMode'
+import { messageForAuthError } from '@/lib/authErrors'
 import { useToast } from '@/hooks/useToast'
 
 export function SignIn() {
   const navigate = useNavigate()
+  const location = useLocation()
   const toast = useToast()
-  const [email, setEmail] = useState('jordan@example.com')
-  const [password, setPassword] = useState('••••••••')
+  const { user, signInWithEmail, sendPasswordReset } = useAuth()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
   const [loading, setLoading] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
 
-  function onSubmit(e: React.FormEvent) {
+  const fromPath =
+    (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/'
+
+  useEffect(() => {
+    if (user) navigate(fromPath, { replace: true })
+  }, [user, fromPath, navigate])
+
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     const next: typeof errors = {}
     if (!email.includes('@')) next.email = 'Please enter a valid email address.'
@@ -28,17 +41,52 @@ export function SignIn() {
       return
     }
     setLoading(true)
-    window.setTimeout(() => {
-      setLoading(false)
+    try {
+      await signInWithEmail(email, password)
       toast.push({
         variant: 'success',
         title: 'Welcome back',
         description: 'Redirecting to your home…',
       })
-      window.setTimeout(() => {
-        navigate('/')
-      }, 650)
-    }, 900)
+      navigate(fromPath, { replace: true })
+    } catch (err) {
+      toast.push({
+        variant: 'error',
+        title: 'Sign-in failed',
+        description: messageForAuthError(err),
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function onForgotPassword() {
+    if (!email.includes('@')) {
+      setErrors((prev) => ({ ...prev, email: 'Enter your email above, then tap forgot password again.' }))
+      toast.push({
+        variant: 'error',
+        title: 'Email required',
+        description: 'Enter the email for your account, then request a reset link.',
+      })
+      return
+    }
+    setResetLoading(true)
+    try {
+      await sendPasswordReset(email)
+      toast.push({
+        variant: 'success',
+        title: 'Check your inbox',
+        description: 'If an account exists for that email, we sent a reset link.',
+      })
+    } catch (err) {
+      toast.push({
+        variant: 'error',
+        title: 'Could not send reset email',
+        description: messageForAuthError(err),
+      })
+    } finally {
+      setResetLoading(false)
+    }
   }
 
   return (
@@ -59,7 +107,11 @@ export function SignIn() {
                 connected—without the noise of public social feeds.
               </p>
             </div>
-            <p className="text-xs font-medium text-white/65">Mock authentication · no backend yet</p>
+            <p className="text-xs font-medium text-white/65">
+              {getAuthMode() === 'firebase'
+                ? 'Secure sign-in with Firebase Authentication'
+                : 'Local sign-in — your credentials stay on this device'}
+            </p>
           </div>
         </aside>
 
@@ -79,14 +131,14 @@ export function SignIn() {
 
               <form className="mt-8 space-y-4" onSubmit={onSubmit}>
                 <Input
-                  label="Work email"
+                  label="Email"
                   name="email"
                   type="email"
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   error={errors.email}
-                  hint="Use the email your gym has on file."
+                  hint="Use the email you registered with."
                 />
                 <Input
                   label="Password"
@@ -107,7 +159,12 @@ export function SignIn() {
                     />
                     Remember this device
                   </label>
-                  <button type="button" className="text-xs font-semibold text-accent hover:underline">
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-accent hover:underline disabled:opacity-45"
+                    disabled={resetLoading}
+                    onClick={() => void onForgotPassword()}
+                  >
                     Forgot password
                   </button>
                 </div>
@@ -124,7 +181,18 @@ export function SignIn() {
                   <span className="h-px flex-1 bg-border-strong" />
                 </div>
 
-                <Button type="button" variant="secondary" className="w-full">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() =>
+                    toast.push({
+                      variant: 'error',
+                      title: 'Not available yet',
+                      description: 'Google sign-in is not enabled. Use email and password.',
+                    })
+                  }
+                >
                   <span className="inline-flex items-center gap-2">
                     <GoogleMark />
                     Continue with Google

@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { RequireAuth } from '@/components/auth/RequireAuth'
 import { AppShell } from '@/components/layout/AppShell'
 import { Community } from '@/pages/Community'
 import { CreateEvent } from '@/pages/CreateEvent'
@@ -19,18 +20,20 @@ export default function App() {
       <Route path="/sign-in" element={<SignIn />} />
       <Route path="/sign-up" element={<SignUp />} />
 
-      <Route element={<AppShell />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/events" element={<EventsBoard />} />
-        <Route path="/members" element={<MembersPage />} />
-        <Route path="/members/:memberName" element={<MemberProfilePage />} />
-        <Route path="/events/new" element={<CreateEvent />} />
-        <Route path="/events/:eventId" element={<EventDetail />} />
-        <Route path="/community" element={<Community />} />
-        <Route path="/me" element={<Navigate to="/me/reservations" replace />} />
-        <Route path="/me/reservations" element={<ReservationsPage />} />
-        <Route path="/me/profile" element={<ProfilePage />} />
-        <Route path="/settings/notifications" element={<NotificationSettings />} />
+      <Route element={<RequireAuth />}>
+        <Route element={<AppShell />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/events" element={<EventsBoard />} />
+          <Route path="/members" element={<MembersPage />} />
+          <Route path="/members/:memberName" element={<MemberProfilePage />} />
+          <Route path="/events/new" element={<CreateEvent />} />
+          <Route path="/events/:eventId" element={<EventDetail />} />
+          <Route path="/community" element={<Community />} />
+          <Route path="/me" element={<Navigate to="/me/reservations" replace />} />
+          <Route path="/me/reservations" element={<ReservationsPage />} />
+          <Route path="/me/profile" element={<ProfilePage />} />
+          <Route path="/settings/notifications" element={<NotificationSettings />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
