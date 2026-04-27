@@ -18,6 +18,7 @@ import type { AppUser } from "@/lib/appUser";
 import { firebaseUserToAppUser } from "@/lib/appUser";
 import { getAuthMode } from "@/lib/authMode";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
+import { upsertMemberDirectoryEntryFromUser } from "@/lib/memberDirectory";
 import {
   getLocalSessionUser,
   LOCAL_AUTH_SESSION_KEY,
@@ -60,11 +61,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       if (mode === "local") {
         const u = await localSignInWithEmail(email, password);
+        upsertMemberDirectoryEntryFromUser(u);
         setUser(u);
         return;
       }
       const auth = getFirebaseAuth();
       await signInWithEmailAndPassword(auth, email.trim(), password);
+      upsertMemberDirectoryEntryFromUser(
+        auth.currentUser ? firebaseUserToAppUser(auth.currentUser) : null,
+      );
     },
     [mode],
   );
@@ -77,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password,
           displayName.trim(),
         );
+        upsertMemberDirectoryEntryFromUser(u);
         setUser(u);
         return;
       }
@@ -90,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (name && cred.user) {
         await updateProfile(cred.user, { displayName: name });
       }
+      upsertMemberDirectoryEntryFromUser(firebaseUserToAppUser(cred.user));
     },
     [mode],
   );

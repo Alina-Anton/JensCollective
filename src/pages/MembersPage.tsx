@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { useAuth } from '@/hooks/useAuth'
 import {
-  getLocalAuthMemberDirectory,
-  subscribeLocalAuthUsers,
-} from '@/lib/localCredentialsAuth'
+  getMergedMemberDirectory,
+  subscribeMemberDirectory,
+} from '@/lib/memberDirectory'
 
 const MEMBERS_PER_PAGE = 10
 
@@ -15,13 +15,13 @@ export function MembersPage() {
   const { user } = useAuth()
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
-  const [usersVersion, setUsersVersion] = useState(0)
+  const [directoryVersion, setDirectoryVersion] = useState(0)
 
-  useEffect(() => subscribeLocalAuthUsers(() => setUsersVersion((v) => v + 1)), [])
+  useEffect(() => subscribeMemberDirectory(() => setDirectoryVersion((v) => v + 1)), [])
 
   const allMembers = useMemo(() => {
-    void usersVersion
-    const localMembers = getLocalAuthMemberDirectory()
+    void directoryVersion
+    const allDirectoryMembers = getMergedMemberDirectory()
     const currentUserMember =
       user && user.displayName
         ? [
@@ -40,7 +40,7 @@ export function MembersPage() {
             },
           ]
         : []
-    const merged = [...localMembers, ...currentUserMember]
+    const merged = [...allDirectoryMembers, ...currentUserMember]
     const byName = new Map<string, (typeof merged)[number]>()
     for (const member of merged) {
       const key = member.name.trim().toLowerCase()
@@ -48,7 +48,7 @@ export function MembersPage() {
       if (!byName.has(key)) byName.set(key, member)
     }
     return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name))
-  }, [user, usersVersion])
+  }, [user, directoryVersion])
 
   const filteredMembers = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -93,7 +93,10 @@ export function MembersPage() {
                 className="flex items-center gap-3 rounded-xl border border-border bg-surface/50 px-3 py-2.5"
               >
                 <Avatar initials={member.initials} src={member.avatarUrl} title={member.name} />
-                <span className="text-sm font-semibold text-fg">{member.name}</span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-fg">{member.name}</p>
+                  <p className="truncate text-xs text-muted">{member.email || 'No email'}</p>
+                </div>
               </Link>
             ))}
           </ul>

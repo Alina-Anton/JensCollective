@@ -1,5 +1,5 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { getAuth, type Auth } from 'firebase/auth'
+import { getAuth, signInAnonymously, type Auth } from 'firebase/auth'
 import { getFirestore, type Firestore } from 'firebase/firestore'
 
 /**
@@ -42,6 +42,7 @@ export function isFirebaseConfigured(): boolean {
 let app: FirebaseApp | undefined
 let auth: Auth | undefined
 let db: Firestore | undefined
+let firestoreAuthReady: Promise<void> | null = null
 
 export function getFirebaseApp(): FirebaseApp {
   if (!isFirebaseConfigured()) {
@@ -59,6 +60,18 @@ export function getFirebaseAuth(): Auth {
 export function getFirebaseDb(): Firestore {
   if (!db) db = getFirestore(getFirebaseApp())
   return db
+}
+
+/** Ensures Firestore operations have a Firebase auth identity in local-auth mode. */
+export function ensureFirestoreAuth(): Promise<void> {
+  if (firestoreAuthReady) return firestoreAuthReady
+  const authRef = getFirebaseAuth()
+  if (authRef.currentUser) {
+    firestoreAuthReady = Promise.resolve()
+    return firestoreAuthReady
+  }
+  firestoreAuthReady = signInAnonymously(authRef).then(() => {})
+  return firestoreAuthReady
 }
 
 /** Opens Authentication → Sign-in method (enable Email/Password there). */

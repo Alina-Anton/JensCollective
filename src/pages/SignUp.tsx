@@ -71,8 +71,7 @@ export function SignUp() {
           <div className="space-y-1 text-center">
             <h1 className="font-display text-2xl tracking-tight text-fg">Create your account</h1>
             <p className="text-sm text-muted">
-              Use your email and a strong password. Accounts are stored in this browser only (local
-              mode) unless your host sets Firebase auth.
+              Use your email and a strong password. Accounts sync across devices with Firebase auth.
             </p>
             {getAuthMode() === 'firebase' ? (
               <p className="mt-3 text-left text-xs leading-relaxed text-muted">

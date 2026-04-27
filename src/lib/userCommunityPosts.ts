@@ -1,8 +1,29 @@
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  setDoc,
+  where,
+  writeBatch,
+} from 'firebase/firestore'
 import { communityPosts, type CommunityPost } from '@/data/mockData'
+import { ensureFirestoreAuth, getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase'
 
 const STORAGE_KEY = 'jenscollective_user_posts_v1'
 const COMMENTS_STORAGE_KEY = 'jenscollective_user_post_comments_v1'
 const CHANGE_EVENT = 'jenscollective-user-posts'
+const POSTS_COLLECTION = 'communityPosts'
+const COMMENTS_COLLECTION = 'communityComments'
+const firebaseEnabled = isFirebaseConfigured()
+let firestorePostsUnsub: (() => void) | null = null
+let firestoreCommentsUnsub: (() => void) | null = null
+let cachedPosts: CommunityPost[] = []
+let cachedComments: CommunityComment[] = []
+const subscribers = new Set<() => void>()
 export type CommunityComment = {
   id: string
   postId: string
@@ -29,6 +50,7 @@ function isCommunityPost(x: unknown): x is CommunityPost {
 }
 
 export function getUserCommunityPosts(): CommunityPost[] {
+  if (firebaseEnabled) return cachedPosts
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
@@ -64,6 +86,7 @@ function isCommunityComment(x: unknown): x is CommunityComment {
 }
 
 function getUserCommunityComments(): CommunityComment[] {
+  if (firebaseEnabled) return cachedComments
   try {
     const raw = localStorage.getItem(COMMENTS_STORAGE_KEY)
     if (!raw) return []
@@ -81,12 +104,31 @@ function writeComments(list: CommunityComment[]) {
 }
 
 export function appendUserCommunityPost(post: CommunityPost) {
+  if (firebaseEnabled) {
+    void ensureFirestoreAuth().then(() =>
+      setDoc(doc(collection(getFirebaseDb(), POSTS_COLLECTION), post.id), post),
+    )
+    return
+  }
   writePosts([post, ...getUserCommunityPosts()])
 }
 
 export function updateUserCommunityPost(postId: string, body: string) {
   const trimmed = body.trim()
   if (!trimmed) return
+  if (firebaseEnabled) {
+    const current = getUserCommunityPosts().find((p) => p.id === postId)
+    if (!current) return
+    const next = {
+      ...current,
+      body: trimmed,
+      title: trimmed.length > 64 ? `${trimmed.slice(0, 64).trim()}...` : trimmed,
+    }
+    void ensureFirestoreAuth().then(() =>
+      setDoc(doc(collection(getFirebaseDb(), POSTS_COLLECTION), postId), next),
+    )
+    return
+  }
   const next = getUserCommunityPosts().map((post) =>
     post.id === postId
       ? {
@@ -100,6 +142,21 @@ export function updateUserCommunityPost(postId: string, body: string) {
 }
 
 export function deleteUserCommunityPost(postId: string) {
+  if (firebaseEnabled) {
+    void ensureFirestoreAuth().then(async () => {
+      const db = getFirebaseDb()
+      await deleteDoc(doc(collection(db, POSTS_COLLECTION), postId))
+      const commentSnap = await getDocs(
+        query(collection(db, COMMENTS_COLLECTION), where('postId', '==', postId)),
+      )
+      if (!commentSnap.empty) {
+        const batch = writeBatch(db)
+        for (const row of commentSnap.docs) batch.delete(row.ref)
+        await batch.commit()
+      }
+    })
+    return
+  }
   const nextPosts = getUserCommunityPosts().filter((post) => post.id !== postId)
   const nextComments = getUserCommunityComments().filter((comment) => comment.postId !== postId)
   writePosts(nextPosts)
@@ -107,6 +164,7 @@ export function deleteUserCommunityPost(postId: string) {
 }
 
 export function deleteUserCommunityPostsByAuthor(author: string) {
+  if (firebaseEnabled) return
   const target = author.trim().toLowerCase()
   if (!target) return
   const posts = getUserCommunityPosts()
@@ -121,6 +179,12 @@ export function deleteUserCommunityPostsByAuthor(author: string) {
 }
 
 export function appendUserCommunityComment(comment: CommunityComment) {
+  if (firebaseEnabled) {
+    void ensureFirestoreAuth().then(() =>
+      setDoc(doc(collection(getFirebaseDb(), COMMENTS_COLLECTION), comment.id), comment),
+    )
+    return
+  }
   writeComments([...getUserCommunityComments(), comment])
 }
 
@@ -131,6 +195,40 @@ export function getCommunityCommentsByPostId(postId: string): CommunityComment[]
 }
 
 export function subscribeUserCommunityPosts(onChange: () => void) {
+  if (firebaseEnabled) {
+    subscribers.add(onChange)
+    if (!firestorePostsUnsub || !firestoreCommentsUnsub) {
+      void ensureFirestoreAuth().then(() => {
+        const db = getFirebaseDb()
+        firestorePostsUnsub = onSnapshot(
+          query(collection(db, POSTS_COLLECTION), orderBy('at', 'desc')),
+          (snap) => {
+            cachedPosts = snap.docs
+              .map((d) => d.data())
+              .filter(isCommunityPost)
+              .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+            for (const fn of subscribers) fn()
+          },
+        )
+        firestoreCommentsUnsub = onSnapshot(
+          query(collection(db, COMMENTS_COLLECTION), orderBy('at', 'asc')),
+          (snap) => {
+            cachedComments = snap.docs.map((d) => d.data()).filter(isCommunityComment)
+            for (const fn of subscribers) fn()
+          },
+        )
+      })
+    }
+    return () => {
+      subscribers.delete(onChange)
+      if (!subscribers.size) {
+        firestorePostsUnsub?.()
+        firestoreCommentsUnsub?.()
+        firestorePostsUnsub = null
+        firestoreCommentsUnsub = null
+      }
+    }
+  }
   const onStorage = (e: StorageEvent) => {
     if (e.key === STORAGE_KEY || e.key === null) onChange()
   }
