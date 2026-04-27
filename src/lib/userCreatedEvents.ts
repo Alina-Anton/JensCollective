@@ -1,7 +1,22 @@
 import type { EventCategory, GymEvent } from '@/data/mockData'
+import {
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  setDoc,
+} from 'firebase/firestore'
+import { getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase'
 
 const STORAGE_KEY = 'jenscollective_user_events_v1'
 const CHANGE_EVENT = 'jenscollective-user-events'
+const EVENTS_COLLECTION = 'events'
+const firebaseEnabled = isFirebaseConfigured()
+let firestoreUnsub: (() => void) | null = null
+let cachedEvents: GymEvent[] = []
+const subscribers = new Set<() => void>()
 
 const CATEGORIES: EventCategory[] = [
   'Strength',
@@ -42,6 +57,7 @@ function isGymEvent(x: unknown): x is GymEvent {
 }
 
 export function getUserCreatedEvents(): GymEvent[] {
+  if (firebaseEnabled) return cachedEvents
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
@@ -59,20 +75,52 @@ function writeUserCreatedEvents(list: GymEvent[]) {
 }
 
 export function appendUserCreatedEvent(event: GymEvent) {
+  if (firebaseEnabled) {
+    void setDoc(doc(collection(getFirebaseDb(), EVENTS_COLLECTION), event.id), event)
+    return
+  }
   writeUserCreatedEvents([...getUserCreatedEvents(), event])
 }
 
 export function updateUserCreatedEvent(eventId: string, event: GymEvent) {
+  if (firebaseEnabled) {
+    void setDoc(doc(collection(getFirebaseDb(), EVENTS_COLLECTION), eventId), event)
+    return
+  }
   const next = getUserCreatedEvents().map((row) => (row.id === eventId ? event : row))
   writeUserCreatedEvents(next)
 }
 
 export function deleteUserCreatedEvent(eventId: string) {
+  if (firebaseEnabled) {
+    void deleteDoc(doc(collection(getFirebaseDb(), EVENTS_COLLECTION), eventId))
+    return
+  }
   const next = getUserCreatedEvents().filter((row) => row.id !== eventId)
   writeUserCreatedEvents(next)
 }
 
 export function subscribeUserCreatedEvents(onChange: () => void) {
+  if (firebaseEnabled) {
+    subscribers.add(onChange)
+    if (!firestoreUnsub) {
+      const q = query(collection(getFirebaseDb(), EVENTS_COLLECTION), orderBy('startsAt', 'asc'))
+      firestoreUnsub = onSnapshot(q, (snap) => {
+        cachedEvents = snap.docs
+          .map((d) => d.data())
+          .filter(isGymEvent)
+          .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
+        for (const fn of subscribers) fn()
+      })
+    }
+    return () => {
+      subscribers.delete(onChange)
+      if (!subscribers.size && firestoreUnsub) {
+        firestoreUnsub()
+        firestoreUnsub = null
+      }
+    }
+  }
   const onStorage = (e: StorageEvent) => {
     if (e.key === STORAGE_KEY || e.key === null) onChange()
   }
@@ -86,6 +134,7 @@ export function subscribeUserCreatedEvents(onChange: () => void) {
 }
 
 export function getUserCreatedEventById(id: string): GymEvent | undefined {
+  if (firebaseEnabled) return cachedEvents.find((e) => e.id === id)
   return getUserCreatedEvents().find((e) => e.id === id)
 }
 

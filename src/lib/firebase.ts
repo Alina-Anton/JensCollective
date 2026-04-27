@@ -1,5 +1,6 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
 import { getAuth, type Auth } from 'firebase/auth'
+import { getFirestore, type Firestore } from 'firebase/firestore'
 
 /**
  * Default web app config for project `jenscollective-2026`.
@@ -40,6 +41,7 @@ export function isFirebaseConfigured(): boolean {
 
 let app: FirebaseApp | undefined
 let auth: Auth | undefined
+let db: Firestore | undefined
 
 export function getFirebaseApp(): FirebaseApp {
   if (!isFirebaseConfigured()) {
@@ -52,6 +54,11 @@ export function getFirebaseApp(): FirebaseApp {
 export function getFirebaseAuth(): Auth {
   if (!auth) auth = getAuth(getFirebaseApp())
   return auth
+}
+
+export function getFirebaseDb(): Firestore {
+  if (!db) db = getFirestore(getFirebaseApp())
+  return db
 }
 
 /** Opens Authentication → Sign-in method (enable Email/Password there). */

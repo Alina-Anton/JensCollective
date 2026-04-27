@@ -66,7 +66,6 @@ export function EventsBoard() {
 
     return allEvents.filter((e) => {
       if (mineOnly) {
-        if (!e.id.startsWith("evt-local-")) return false;
         if (e.creatorUid && user?.uid) {
           if (e.creatorUid !== user.uid) return false;
         } else {
@@ -91,7 +90,6 @@ export function EventsBoard() {
   }, [query, category, datePreset, mineOnly, allEvents, user]);
 
   function canManageEvent(event: (typeof allEvents)[number]) {
-    if (!event.id.startsWith("evt-local-")) return false;
     if (event.creatorUid && user?.uid) return event.creatorUid === user.uid;
     const userName = user?.displayName?.trim().toLowerCase();
     return Boolean(

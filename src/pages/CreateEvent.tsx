@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
@@ -12,6 +12,7 @@ import {
   getUserCreatedEventById,
   localDateTimeToIsoRange,
   parseCategory,
+  subscribeUserCreatedEvents,
   updateUserCreatedEvent,
 } from "@/lib/userCreatedEvents";
 import { displayNameForUser, initialsForUser } from "@/lib/userDisplay";
@@ -57,10 +58,13 @@ export function CreateEvent() {
   const navigate = useNavigate();
   const { eventId } = useParams();
   const { user } = useAuth();
-  const editingEvent = useMemo(
-    () => (eventId ? getUserCreatedEventById(eventId) : undefined),
-    [eventId],
+  const [catalogVersion, setCatalogVersion] = useState(0);
+  useEffect(
+    () => subscribeUserCreatedEvents(() => setCatalogVersion((v) => v + 1)),
+    [],
   );
+  void catalogVersion;
+  const editingEvent = eventId ? getUserCreatedEventById(eventId) : undefined;
   const isEditMode = Boolean(editingEvent);
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
