@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardBody } from '@/components/ui/Card'
 import { members } from '@/data/mockData'
 import { useAuth } from '@/hooks/useAuth'
+import { isDemoModeEnabled } from '@/lib/demoMode'
 import { getLocalAuthMemberDirectory } from '@/lib/localCredentialsAuth'
 import { findMemberProfileByName, getMemberProfileByKeys } from '@/lib/memberProfileStorage'
 
@@ -53,6 +54,7 @@ function buildHobby(name: string) {
 export function MemberProfilePage() {
   const { memberName } = useParams()
   const { user } = useAuth()
+  const demoMode = isDemoModeEnabled()
   const decodedRef = decodeURIComponent(memberName ?? '')
   const member = useMemo(() => {
     const localMembers = getLocalAuthMemberDirectory()
@@ -67,9 +69,9 @@ export function MemberProfilePage() {
             },
           ]
         : []
-    const merged = [...localMembers, ...members, ...currentUserMember]
+    const merged = [...localMembers, ...(demoMode ? members : []), ...currentUserMember]
     return merged.find((m) => (m as { uid?: string }).uid === decodedRef || m.name === decodedRef)
-  }, [decodedRef, user])
+  }, [decodedRef, user, demoMode])
   const memberProfile =
     getMemberProfileByKeys([
       decodedRef,
@@ -112,19 +114,19 @@ export function MemberProfilePage() {
             <div className="rounded-2xl border border-border bg-surface/40 p-4">
               <p className="text-xs font-semibold tracking-wide text-muted">Training Focus</p>
               <p className="mt-2 text-sm text-fg-soft">
-                {memberProfile?.trainingFocus || buildTrainingFocus(member.name)}
+                {memberProfile?.trainingFocus || (demoMode ? buildTrainingFocus(member.name) : 'Not shared yet')}
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-surface/40 p-4">
               <p className="text-xs font-semibold tracking-wide text-muted">Belt</p>
               <p className="mt-2 text-sm text-fg-soft">
-                {memberProfile?.belt || buildBelt(member.name)}
+                {memberProfile?.belt || (demoMode ? buildBelt(member.name) : 'Not shared yet')}
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-surface/40 p-4">
               <p className="text-xs font-semibold tracking-wide text-muted">Hobby</p>
               <p className="mt-2 text-sm text-fg-soft">
-                {memberProfile?.hobby || buildHobby(member.name)}
+                {memberProfile?.hobby || (demoMode ? buildHobby(member.name) : 'Not shared yet')}
               </p>
             </div>
           </div>
@@ -133,7 +135,9 @@ export function MemberProfilePage() {
             <p className="text-xs font-semibold tracking-wide text-muted">About Me</p>
             <p className="mt-2 text-sm leading-relaxed text-fg-soft">
               {memberProfile?.aboutMe ||
-                `${member.name} trains consistently and brings positive energy to the mats. Focused on improving technique, supporting teammates, and building confidence through regular training.`}
+                (demoMode
+                  ? `${member.name} trains consistently and brings positive energy to the mats. Focused on improving technique, supporting teammates, and building confidence through regular training.`
+                  : 'No about section shared yet.')}
             </p>
           </div>
         </CardBody>

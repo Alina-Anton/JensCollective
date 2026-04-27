@@ -6,6 +6,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { messageForAuthError } from "@/lib/authErrors";
+import { isDemoModeEnabled } from "@/lib/demoMode";
 import { displayNameForUser, initialsForUser } from "@/lib/userDisplay";
 import {
   getProfileAvatarUrl,
@@ -31,6 +32,7 @@ export function ProfilePage() {
   const toast = useToast();
   const profileKey = user?.uid ?? user?.email ?? user?.displayName ?? "";
   const storedProfile = getMemberProfile(profileKey);
+  const demoMode = isDemoModeEnabled();
 
   const [preferredName, setPreferredName] = useState(
     () => storedProfile?.preferredName ?? displayNameForUser(user),
@@ -51,7 +53,9 @@ export function ProfilePage() {
   const [trainingFocusDraft, setTrainingFocusDraft] = useState(trainingFocus);
   const [aboutMe, setAboutMe] = useState(
     storedProfile?.aboutMe ??
-      "I train to build consistency, confidence, and calm under pressure. I enjoy mobility-focused warmups, technical drilling, and helping newer members feel welcome on the mats.",
+      (demoMode
+        ? "I train to build consistency, confidence, and calm under pressure. I enjoy mobility-focused warmups, technical drilling, and helping newer members feel welcome on the mats."
+        : ""),
   );
   const [aboutDraft, setAboutDraft] = useState(aboutMe);
   const [editingProfile, setEditingProfile] = useState(false);

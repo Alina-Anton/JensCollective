@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -6,104 +12,117 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
-} from 'firebase/auth'
-import { AuthContext } from '@/context/authContext'
-import type { AppUser } from '@/lib/appUser'
-import { firebaseUserToAppUser } from '@/lib/appUser'
-import { getAuthMode } from '@/lib/authMode'
-import { getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebase'
+} from "firebase/auth";
+import { AuthContext } from "@/context/authContext";
+import type { AppUser } from "@/lib/appUser";
+import { firebaseUserToAppUser } from "@/lib/appUser";
+import { getAuthMode } from "@/lib/authMode";
+import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
 import {
   getLocalSessionUser,
   LOCAL_AUTH_SESSION_KEY,
   localSignInWithEmail,
   localSignOut,
   localSignUpWithEmail,
-} from '@/lib/localCredentialsAuth'
+} from "@/lib/localCredentialsAuth";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const mode = getAuthMode()
+  const mode = getAuthMode();
   const [user, setUser] = useState<AppUser | null>(() =>
-    mode === 'local' ? getLocalSessionUser() : null,
-  )
+    mode === "local" ? getLocalSessionUser() : null,
+  );
   const [loading, setLoading] = useState(() =>
-    mode === 'local' ? false : isFirebaseConfigured(),
-  )
+    mode === "local" ? false : isFirebaseConfigured(),
+  );
 
   useEffect(() => {
-    if (mode === 'local') {
+    if (mode === "local") {
       const onStorage = (e: StorageEvent) => {
         if (e.key === LOCAL_AUTH_SESSION_KEY || e.key === null) {
-          setUser(getLocalSessionUser())
+          setUser(getLocalSessionUser());
         }
-      }
-      window.addEventListener('storage', onStorage)
-      return () => window.removeEventListener('storage', onStorage)
+      };
+      window.addEventListener("storage", onStorage);
+      return () => window.removeEventListener("storage", onStorage);
     }
 
     if (!isFirebaseConfigured()) {
-      return
+      return;
     }
-    const auth = getFirebaseAuth()
+    const auth = getFirebaseAuth();
     return onAuthStateChanged(auth, (next) => {
-      setUser(next ? firebaseUserToAppUser(next) : null)
-      setLoading(false)
-    })
-  }, [mode])
+      setUser(next ? firebaseUserToAppUser(next) : null);
+      setLoading(false);
+    });
+  }, [mode]);
 
   const signInWithEmail = useCallback(
     async (email: string, password: string) => {
-      if (mode === 'local') {
-        const u = await localSignInWithEmail(email, password)
-        setUser(u)
-        return
+      if (mode === "local") {
+        const u = await localSignInWithEmail(email, password);
+        setUser(u);
+        return;
       }
-      const auth = getFirebaseAuth()
-      await signInWithEmailAndPassword(auth, email.trim(), password)
+      const auth = getFirebaseAuth();
+      await signInWithEmailAndPassword(auth, email.trim(), password);
     },
     [mode],
-  )
+  );
 
   const signUpWithEmail = useCallback(
     async (email: string, password: string, displayName: string) => {
-      if (mode === 'local') {
-        const u = await localSignUpWithEmail(email, password, displayName.trim())
-        setUser(u)
-        return
+      if (mode === "local") {
+        const u = await localSignUpWithEmail(
+          email,
+          password,
+          displayName.trim(),
+        );
+        setUser(u);
+        return;
       }
-      const auth = getFirebaseAuth()
-      const cred = await createUserWithEmailAndPassword(auth, email.trim(), password)
-      const name = displayName.trim()
+      const auth = getFirebaseAuth();
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password,
+      );
+      const name = displayName.trim();
       if (name && cred.user) {
-        await updateProfile(cred.user, { displayName: name })
+        await updateProfile(cred.user, { displayName: name });
       }
     },
     [mode],
-  )
+  );
 
   const signOutUser = useCallback(async () => {
-    if (mode === 'local') {
-      localSignOut()
-      setUser(null)
-      return
+    if (mode === "local") {
+      localSignOut();
+      setUser(null);
+      return;
     }
-    if (!isFirebaseConfigured()) return
-    await signOut(getFirebaseAuth())
-  }, [mode])
+    if (!isFirebaseConfigured()) return;
+    await signOut(getFirebaseAuth());
+  }, [mode]);
 
   const sendPasswordReset = useCallback(
     async (email: string) => {
-      if (mode === 'local') {
-        throw Object.assign(new Error('Password reset is not available for local browser accounts.'), {
-          code: 'auth/password-reset-local-only',
-        })
+      if (mode === "local") {
+        throw Object.assign(
+          new Error(
+            "Password reset is not available for local browser accounts.",
+          ),
+          {
+            code: "auth/password-reset-local-only",
+          },
+        );
       }
-      const auth = getFirebaseAuth()
-      await sendPasswordResetEmail(auth, email.trim())
+      const auth = getFirebaseAuth();
+      await sendPasswordResetEmail(auth, email.trim());
     },
     [mode],
-  )
+  );
 
-  const authReady = mode === 'local' || isFirebaseConfigured()
+  const authReady = mode === "local" || isFirebaseConfigured();
 
   const value = useMemo(
     () => ({
@@ -115,8 +134,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOutUser,
       sendPasswordReset,
     }),
-    [user, loading, authReady, signInWithEmail, signUpWithEmail, signOutUser, sendPasswordReset],
-  )
+    [
+      user,
+      loading,
+      authReady,
+      signInWithEmail,
+      signUpWithEmail,
+      signOutUser,
+      sendPasswordReset,
+    ],
+  );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
