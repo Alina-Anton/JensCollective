@@ -11,6 +11,10 @@ import {
   getProfileAvatarUrl,
   setProfileAvatarUrl,
 } from "@/lib/profileAvatarStorage";
+import {
+  getMemberProfile,
+  saveMemberProfile,
+} from "@/lib/memberProfileStorage";
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
@@ -25,12 +29,14 @@ export function ProfilePage() {
   const { user, signOutUser, sendPasswordReset } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
+  const profileKey = user?.uid ?? user?.email ?? user?.displayName ?? "";
+  const storedProfile = getMemberProfile(profileKey);
 
-  const [preferredName, setPreferredName] = useState(() =>
-    displayNameForUser(user),
+  const [preferredName, setPreferredName] = useState(
+    () => storedProfile?.preferredName ?? displayNameForUser(user),
   );
-  const [preferredNameDraft, setPreferredNameDraft] = useState(() =>
-    displayNameForUser(user),
+  const [preferredNameDraft, setPreferredNameDraft] = useState(
+    () => storedProfile?.preferredName ?? displayNameForUser(user),
   );
   const [phone, setPhone] = useState("+1 (415) 555-0192");
   const [phoneDraft, setPhoneDraft] = useState(phone);
@@ -40,17 +46,18 @@ export function ProfilePage() {
   const [emergencyContactDraft, setEmergencyContactDraft] =
     useState(emergencyContact);
   const [trainingFocus, setTrainingFocus] = useState(
-    "Strength + mobility balance",
+    storedProfile?.trainingFocus ?? "",
   );
   const [trainingFocusDraft, setTrainingFocusDraft] = useState(trainingFocus);
   const [aboutMe, setAboutMe] = useState(
-    "I train to build consistency, confidence, and calm under pressure. I enjoy mobility-focused warmups, technical drilling, and helping newer members feel welcome on the mats.",
+    storedProfile?.aboutMe ??
+      "I train to build consistency, confidence, and calm under pressure. I enjoy mobility-focused warmups, technical drilling, and helping newer members feel welcome on the mats.",
   );
   const [aboutDraft, setAboutDraft] = useState(aboutMe);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [belt, setBelt] = useState("Blue Belt");
+  const [belt, setBelt] = useState(storedProfile?.belt ?? "");
   const [beltDraft, setBeltDraft] = useState(belt);
-  const [hobby, setHobby] = useState("Trail running and coffee brewing");
+  const [hobby, setHobby] = useState(storedProfile?.hobby ?? "");
   const [hobbyDraft, setHobbyDraft] = useState(hobby);
   const aboutInputRef = useRef<HTMLTextAreaElement | null>(null);
   const avatarFileRef = useRef<HTMLInputElement | null>(null);
@@ -310,13 +317,43 @@ export function ProfilePage() {
                   variant="secondary"
                   className="h-9 w-full px-3"
                   onClick={() => {
-                    setPreferredName(preferredNameDraft.trim());
+                    const nextPreferredName = preferredNameDraft.trim();
+                    const nextTrainingFocus = trainingFocusDraft.trim();
+                    const nextAbout = aboutDraft.trim();
+                    const nextBelt = beltDraft.trim();
+                    const nextHobby = hobbyDraft.trim();
+                    setPreferredName(nextPreferredName);
                     setPhone(phoneDraft.trim());
                     setEmergencyContact(emergencyContactDraft.trim());
-                    setTrainingFocus(trainingFocusDraft.trim());
-                    setAboutMe(aboutDraft.trim());
-                    setBelt(beltDraft.trim());
-                    setHobby(hobbyDraft.trim());
+                    setTrainingFocus(nextTrainingFocus);
+                    setAboutMe(nextAbout);
+                    setBelt(nextBelt);
+                    setHobby(nextHobby);
+                    saveMemberProfile(profileKey, {
+                      preferredName: nextPreferredName,
+                      trainingFocus: nextTrainingFocus,
+                      aboutMe: nextAbout,
+                      belt: nextBelt,
+                      hobby: nextHobby,
+                    });
+                    if (user?.email) {
+                      saveMemberProfile(user.email, {
+                        preferredName: nextPreferredName,
+                        trainingFocus: nextTrainingFocus,
+                        aboutMe: nextAbout,
+                        belt: nextBelt,
+                        hobby: nextHobby,
+                      });
+                    }
+                    if (user?.displayName) {
+                      saveMemberProfile(user.displayName, {
+                        preferredName: nextPreferredName,
+                        trainingFocus: nextTrainingFocus,
+                        aboutMe: nextAbout,
+                        belt: nextBelt,
+                        hobby: nextHobby,
+                      });
+                    }
                     setAvatarMenuOpen(false);
                     setEditingProfile(false);
                   }}

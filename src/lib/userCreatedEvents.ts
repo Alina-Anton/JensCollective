@@ -19,6 +19,7 @@ function isGymEvent(x: unknown): x is GymEvent {
   const h = host as Record<string, unknown>
   if (
     typeof o.id !== 'string' ||
+    (typeof o.creatorUid !== 'string' && typeof o.creatorUid !== 'undefined') ||
     typeof o.title !== 'string' ||
     typeof o.description !== 'string' ||
     typeof o.longDescription !== 'string' ||
@@ -59,6 +60,16 @@ function writeUserCreatedEvents(list: GymEvent[]) {
 
 export function appendUserCreatedEvent(event: GymEvent) {
   writeUserCreatedEvents([...getUserCreatedEvents(), event])
+}
+
+export function updateUserCreatedEvent(eventId: string, event: GymEvent) {
+  const next = getUserCreatedEvents().map((row) => (row.id === eventId ? event : row))
+  writeUserCreatedEvents(next)
+}
+
+export function deleteUserCreatedEvent(eventId: string) {
+  const next = getUserCreatedEvents().filter((row) => row.id !== eventId)
+  writeUserCreatedEvents(next)
 }
 
 export function subscribeUserCreatedEvents(onChange: () => void) {

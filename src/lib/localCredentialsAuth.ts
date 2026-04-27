@@ -2,6 +2,7 @@ import type { AppUser } from '@/lib/appUser'
 
 const USERS_KEY = 'jenscollective_auth_users_v1'
 export const LOCAL_AUTH_SESSION_KEY = 'jenscollective_auth_session_v1'
+export const LOCAL_AUTH_USERS_CHANGED_EVENT = 'jenscollective-auth-users-changed'
 
 type StoredUser = {
   uid: string
@@ -75,6 +76,7 @@ function readUsers(): StoredUser[] {
 
 function writeUsers(users: StoredUser[]) {
   localStorage.setItem(USERS_KEY, JSON.stringify(users))
+  window.dispatchEvent(new Event(LOCAL_AUTH_USERS_CHANGED_EVENT))
 }
 
 function storedToApp(u: StoredUser): AppUser {
@@ -153,4 +155,42 @@ export async function localSignInWithEmail(email: string, password: string): Pro
 
 export function localSignOut() {
   setSessionUid(null)
+}
+
+export function getLocalAuthMemberDirectory(): Array<{
+  uid: string
+  email: string
+  name: string
+  initials: string
+  avatarUrl: string
+}> {
+  return readUsers().map((u) => {
+    const name = u.displayName.trim() || u.email
+    const initials = name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('')
+    return {
+      uid: u.uid,
+      email: u.email,
+      name,
+      initials: initials || 'M',
+      avatarUrl: '',
+    }
+  })
+}
+
+export function subscribeLocalAuthUsers(onChange: () => void) {
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === USERS_KEY || e.key === null) onChange()
+  }
+  const onCustom = () => onChange()
+  window.addEventListener('storage', onStorage)
+  window.addEventListener(LOCAL_AUTH_USERS_CHANGED_EVENT, onCustom)
+  return () => {
+    window.removeEventListener('storage', onStorage)
+    window.removeEventListener(LOCAL_AUTH_USERS_CHANGED_EVENT, onCustom)
+  }
 }

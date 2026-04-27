@@ -1,17 +1,82 @@
+import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody } from '@/components/ui/Card'
 import { members } from '@/data/mockData'
+import { useAuth } from '@/hooks/useAuth'
+import { getLocalAuthMemberDirectory } from '@/lib/localCredentialsAuth'
+import { findMemberProfileByName, getMemberProfileByKeys } from '@/lib/memberProfileStorage'
 
-function buildAboutMe(name: string) {
-  return `${name} trains consistently and brings positive energy to the mats. Focused on improving technique, supporting teammates, and building confidence through regular training.`
+function initialsFromName(name: string) {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || 'M'
+  )
+}
+
+function pickByName(name: string, items: string[]) {
+  const base = Array.from(name).reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
+  return items[base % items.length]
+}
+
+function buildTrainingFocus(name: string) {
+  return pickByName(name, [
+    'Guard retention',
+    'Top control',
+    'Escapes',
+    'Leg locks',
+    'Takedowns',
+    'Pressure passing',
+  ])
+}
+
+function buildBelt(name: string) {
+  return pickByName(name, ['White belt', 'Blue belt', 'Purple belt', 'Brown belt', 'Black belt'])
+}
+
+function buildHobby(name: string) {
+  return pickByName(name, [
+    'Hiking',
+    'Coffee roasting',
+    'Photography',
+    'Chess',
+    'Cycling',
+    'Cooking',
+  ])
 }
 
 export function MemberProfilePage() {
   const { memberName } = useParams()
-  const decodedName = decodeURIComponent(memberName ?? '')
-  const member = members.find((m) => m.name === decodedName)
+  const { user } = useAuth()
+  const decodedRef = decodeURIComponent(memberName ?? '')
+  const member = useMemo(() => {
+    const localMembers = getLocalAuthMemberDirectory()
+    const currentUserMember =
+      user && user.displayName
+        ? [
+            {
+              uid: user.uid,
+              name: user.displayName,
+              initials: initialsFromName(user.displayName),
+              avatarUrl: user.photoURL ?? '',
+            },
+          ]
+        : []
+    const merged = [...localMembers, ...members, ...currentUserMember]
+    return merged.find((m) => (m as { uid?: string }).uid === decodedRef || m.name === decodedRef)
+  }, [decodedRef, user])
+  const memberProfile =
+    getMemberProfileByKeys([
+      decodedRef,
+      (member as { uid?: string }).uid,
+      (member as { email?: string }).email,
+      member?.name,
+    ]) ?? (member ? findMemberProfileByName(member.name) : findMemberProfileByName(decodedRef))
 
   if (!member) {
     return (
@@ -39,9 +104,37 @@ export function MemberProfilePage() {
             </div>
           </div>
 
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-surface/40 p-4">
+              <p className="text-xs font-semibold tracking-wide text-muted">Name</p>
+              <p className="mt-2 text-sm text-fg-soft">{member.name}</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-surface/40 p-4">
+              <p className="text-xs font-semibold tracking-wide text-muted">Training Focus</p>
+              <p className="mt-2 text-sm text-fg-soft">
+                {memberProfile?.trainingFocus || buildTrainingFocus(member.name)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-surface/40 p-4">
+              <p className="text-xs font-semibold tracking-wide text-muted">Belt</p>
+              <p className="mt-2 text-sm text-fg-soft">
+                {memberProfile?.belt || buildBelt(member.name)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-surface/40 p-4">
+              <p className="text-xs font-semibold tracking-wide text-muted">Hobby</p>
+              <p className="mt-2 text-sm text-fg-soft">
+                {memberProfile?.hobby || buildHobby(member.name)}
+              </p>
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-border bg-surface/40 p-4">
             <p className="text-xs font-semibold tracking-wide text-muted">About Me</p>
-            <p className="mt-2 text-sm leading-relaxed text-fg-soft">{buildAboutMe(member.name)}</p>
+            <p className="mt-2 text-sm leading-relaxed text-fg-soft">
+              {memberProfile?.aboutMe ||
+                `${member.name} trains consistently and brings positive energy to the mats. Focused on improving technique, supporting teammates, and building confidence through regular training.`}
+            </p>
           </div>
         </CardBody>
       </Card>

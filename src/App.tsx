@@ -27,6 +27,7 @@ export default function App() {
           <Route path="/members" element={<MembersPage />} />
           <Route path="/members/:memberName" element={<MemberProfilePage />} />
           <Route path="/events/new" element={<CreateEvent />} />
+          <Route path="/events/:eventId/edit" element={<CreateEvent />} />
           <Route path="/events/:eventId" element={<EventDetail />} />
           <Route path="/community" element={<Community />} />
           <Route path="/me" element={<Navigate to="/me/reservations" replace />} />

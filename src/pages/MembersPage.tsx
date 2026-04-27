@@ -1,21 +1,60 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
-import { members } from '@/data/mockData'
+import { useAuth } from '@/hooks/useAuth'
+import {
+  getLocalAuthMemberDirectory,
+  subscribeLocalAuthUsers,
+} from '@/lib/localCredentialsAuth'
 
 const MEMBERS_PER_PAGE = 10
 
 export function MembersPage() {
+  const { user } = useAuth()
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
+  const [usersVersion, setUsersVersion] = useState(0)
+
+  useEffect(() => subscribeLocalAuthUsers(() => setUsersVersion((v) => v + 1)), [])
+
+  const allMembers = useMemo(() => {
+    void usersVersion
+    const localMembers = getLocalAuthMemberDirectory()
+    const currentUserMember =
+      user && user.displayName
+        ? [
+            {
+              uid: user.uid,
+              email: user.email ?? '',
+              name: user.displayName,
+              initials:
+                user.displayName
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((part) => part[0]?.toUpperCase() ?? '')
+                  .join('') || 'M',
+              avatarUrl: user.photoURL ?? '',
+            },
+          ]
+        : []
+    const merged = [...localMembers, ...currentUserMember]
+    const byName = new Map<string, (typeof merged)[number]>()
+    for (const member of merged) {
+      const key = member.name.trim().toLowerCase()
+      if (!key) continue
+      if (!byName.has(key)) byName.set(key, member)
+    }
+    return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [user, usersVersion])
 
   const filteredMembers = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return members
-    return members.filter((member) => member.name.toLowerCase().includes(q))
-  }, [query])
+    if (!q) return allMembers
+    return allMembers.filter((member) => member.name.toLowerCase().includes(q))
+  }, [query, allMembers])
 
   const totalPages = Math.max(1, Math.ceil(filteredMembers.length / MEMBERS_PER_PAGE))
   const currentPage = Math.min(page, totalPages)
@@ -49,8 +88,8 @@ export function MembersPage() {
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {paginatedMembers.map((member) => (
               <Link
-                key={member.name}
-                to={`/members/${encodeURIComponent(member.name)}`}
+                key={member.uid ?? member.name}
+                to={`/members/${encodeURIComponent(member.uid ?? member.name)}`}
                 className="flex items-center gap-3 rounded-xl border border-border bg-surface/50 px-3 py-2.5"
               >
                 <Avatar initials={member.initials} src={member.avatarUrl} title={member.name} />

@@ -8,6 +8,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { displayNameForUser } from "@/lib/userDisplay";
 import { getMergedEvents, reservations } from "@/data/mockData";
 import { subscribeUserCreatedEvents } from "@/lib/userCreatedEvents";
+import {
+  getMergedCommunityPosts,
+  subscribeUserCommunityPosts,
+} from "@/lib/userCommunityPosts";
 
 const reservedSet = new Set(
   reservations
@@ -19,6 +23,7 @@ export function Dashboard() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [catalogVersion, setCatalogVersion] = useState(0);
+  const [postsVersion, setPostsVersion] = useState(0);
 
   useEffect(() => {
     const t = window.setTimeout(() => setLoading(false), 780);
@@ -26,6 +31,7 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => subscribeUserCreatedEvents(() => setCatalogVersion((v) => v + 1)), []);
+  useEffect(() => subscribeUserCommunityPosts(() => setPostsVersion((v) => v + 1)), []);
 
   const mergedEvents = useMemo(() => {
     void catalogVersion;
@@ -41,6 +47,12 @@ export function Dashboard() {
       .slice(0, 3);
   }, [mergedEvents]);
 
+  const eventsCount = mergedEvents.length || 0;
+  const updatesCount = useMemo(() => {
+    void postsVersion;
+    return getMergedCommunityPosts().length || 0;
+  }, [postsVersion]);
+
   if (loading) return <DashboardSkeleton />;
 
   return (
@@ -51,8 +63,9 @@ export function Dashboard() {
             Good evening, {displayNameForUser(user).split(" ")[0] ?? "there"}
           </h1>
           <p className="max-w-2xl text-sm leading-relaxed text-muted">
-            Your week is shaping up thoughtfully—two reservations confirmed, one
-            waitlist, and a community note pinned for Saturday.
+            You currently have {eventsCount} available{" "}
+            {eventsCount === 1 ? "event" : "events"} and {updatesCount} community{" "}
+            {updatesCount === 1 ? "update" : "updates"}.
           </p>
         </div>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:items-end">
@@ -67,16 +80,16 @@ export function Dashboard() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <StatsCard
-          label="My bookings"
-          value="4 sessions"
-          hint="Across strength, conditioning, and mobility."
+          label="Events"
+          value={`${eventsCount} ${eventsCount === 1 ? "event" : "events"}`}
+          hint="Total events currently available in your feed."
           actionTo="/me/reservations"
-          actionLabel="Open my reserved events"
+          actionLabel="Open events and reservations"
         />
         <StatsCard
-          label="Community pulse"
-          value="18 new updates"
-          hint="Posts, announcements, and coach notes you have not read yet."
+          label="Community updates"
+          value={`${updatesCount} ${updatesCount === 1 ? "update" : "updates"}`}
+          hint="Posts and announcements currently visible in community."
           actionTo="/community"
           actionLabel="Open community page"
         />
