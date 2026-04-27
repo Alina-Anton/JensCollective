@@ -117,7 +117,7 @@ export function SignIn() {
 
         <div className="flex items-center justify-center px-4 py-10 sm:px-8">
           <div className="w-full max-w-md space-y-8">
-            <div className="flex items-center justify-between lg:hidden">
+            <div className="flex items-center justify-center lg:hidden">
               <Logo to="/" />
             </div>
 
