@@ -57,7 +57,16 @@ function isGymEvent(x: unknown): x is GymEvent {
 }
 
 export function getUserCreatedEvents(): GymEvent[] {
-  if (firebaseEnabled) return cachedEvents
+  if (firebaseEnabled) {
+    const local = readLocalEvents()
+    return [...cachedEvents, ...local].sort(
+      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    )
+  }
+  return readLocalEvents()
+}
+
+function readLocalEvents(): GymEvent[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
@@ -76,6 +85,7 @@ function writeUserCreatedEvents(list: GymEvent[]) {
 
 export function appendUserCreatedEvent(event: GymEvent) {
   if (firebaseEnabled) {
+    writeUserCreatedEvents([...readLocalEvents(), event])
     void ensureFirestoreAuth().then(() =>
       setDoc(doc(collection(getFirebaseDb(), EVENTS_COLLECTION), event.id), event),
     )
@@ -86,6 +96,8 @@ export function appendUserCreatedEvent(event: GymEvent) {
 
 export function updateUserCreatedEvent(eventId: string, event: GymEvent) {
   if (firebaseEnabled) {
+    const nextLocal = readLocalEvents().map((row) => (row.id === eventId ? event : row))
+    writeUserCreatedEvents(nextLocal)
     void ensureFirestoreAuth().then(() =>
       setDoc(doc(collection(getFirebaseDb(), EVENTS_COLLECTION), eventId), event),
     )
@@ -97,6 +109,8 @@ export function updateUserCreatedEvent(eventId: string, event: GymEvent) {
 
 export function deleteUserCreatedEvent(eventId: string) {
   if (firebaseEnabled) {
+    const nextLocal = readLocalEvents().filter((row) => row.id !== eventId)
+    writeUserCreatedEvents(nextLocal)
     void ensureFirestoreAuth().then(() =>
       deleteDoc(doc(collection(getFirebaseDb(), EVENTS_COLLECTION), eventId)),
     )

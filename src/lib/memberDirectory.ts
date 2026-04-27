@@ -4,6 +4,7 @@ import { getLocalAuthMemberDirectory, subscribeLocalAuthUsers } from '@/lib/loca
 import type { AppUser } from '@/lib/appUser'
 
 const MEMBERS_COLLECTION = 'membersDirectory'
+const LOCAL_MEMBERS_CACHE_KEY = 'jenscollective_member_directory_cache_v1'
 const firebaseEnabled = isFirebaseConfigured()
 const listeners = new Set<() => void>()
 let firestoreUnsub: (() => void) | null = null
@@ -41,9 +42,35 @@ function normalizeMember(x: unknown): MemberDirectoryEntry | null {
   }
 }
 
+function readLocalMembersCache(): MemberDirectoryEntry[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_MEMBERS_CACHE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .map((x) => normalizeMember(x))
+      .filter((x): x is MemberDirectoryEntry => Boolean(x))
+  } catch {
+    return []
+  }
+}
+
+function writeLocalMembersCache(list: MemberDirectoryEntry[]) {
+  localStorage.setItem(LOCAL_MEMBERS_CACHE_KEY, JSON.stringify(list))
+}
+
+function upsertLocalMembersCache(entry: MemberDirectoryEntry) {
+  const existing = readLocalMembersCache()
+  const byUid = new Map(existing.map((m) => [m.uid, m]))
+  byUid.set(entry.uid, entry)
+  writeLocalMembersCache(Array.from(byUid.values()))
+}
+
 export function getMergedMemberDirectory(): MemberDirectoryEntry[] {
   const local = getLocalAuthMemberDirectory()
-  const merged = [...(firebaseEnabled ? cachedRemoteMembers : []), ...local]
+  const localCache = readLocalMembersCache()
+  const merged = [...(firebaseEnabled ? cachedRemoteMembers : []), ...local, ...localCache]
   const byName = new Map<string, MemberDirectoryEntry>()
   for (const member of merged) {
     const key = member.name.trim().toLowerCase()
@@ -101,6 +128,7 @@ export function upsertMemberDirectoryEntryFromUser(user: AppUser | null) {
     initials,
     avatarUrl: user.photoURL ?? '',
   }
+  upsertLocalMembersCache(entry)
   void ensureFirestoreAuth().then(() =>
     setDoc(doc(collection(getFirebaseDb(), MEMBERS_COLLECTION), user.uid), entry),
   )

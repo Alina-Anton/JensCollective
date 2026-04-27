@@ -50,7 +50,14 @@ function isCommunityPost(x: unknown): x is CommunityPost {
 }
 
 export function getUserCommunityPosts(): CommunityPost[] {
-  if (firebaseEnabled) return cachedPosts
+  if (firebaseEnabled) {
+    const local = readLocalPosts()
+    return [...cachedPosts, ...local].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+  }
+  return readLocalPosts()
+}
+
+function readLocalPosts(): CommunityPost[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
@@ -86,7 +93,14 @@ function isCommunityComment(x: unknown): x is CommunityComment {
 }
 
 function getUserCommunityComments(): CommunityComment[] {
-  if (firebaseEnabled) return cachedComments
+  if (firebaseEnabled) {
+    const local = readLocalComments()
+    return [...cachedComments, ...local].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+  }
+  return readLocalComments()
+}
+
+function readLocalComments(): CommunityComment[] {
   try {
     const raw = localStorage.getItem(COMMENTS_STORAGE_KEY)
     if (!raw) return []
@@ -105,6 +119,7 @@ function writeComments(list: CommunityComment[]) {
 
 export function appendUserCommunityPost(post: CommunityPost) {
   if (firebaseEnabled) {
+    writePosts([post, ...readLocalPosts()])
     void ensureFirestoreAuth().then(() =>
       setDoc(doc(collection(getFirebaseDb(), POSTS_COLLECTION), post.id), post),
     )
@@ -117,7 +132,7 @@ export function updateUserCommunityPost(postId: string, body: string) {
   const trimmed = body.trim()
   if (!trimmed) return
   if (firebaseEnabled) {
-    const current = getUserCommunityPosts().find((p) => p.id === postId)
+    const current = [...cachedPosts, ...readLocalPosts()].find((p) => p.id === postId)
     if (!current) return
     const next = {
       ...current,
@@ -127,6 +142,8 @@ export function updateUserCommunityPost(postId: string, body: string) {
     void ensureFirestoreAuth().then(() =>
       setDoc(doc(collection(getFirebaseDb(), POSTS_COLLECTION), postId), next),
     )
+    const nextLocal = readLocalPosts().map((post) => (post.id === postId ? next : post))
+    writePosts(nextLocal)
     return
   }
   const next = getUserCommunityPosts().map((post) =>
@@ -143,6 +160,10 @@ export function updateUserCommunityPost(postId: string, body: string) {
 
 export function deleteUserCommunityPost(postId: string) {
   if (firebaseEnabled) {
+    const nextPosts = readLocalPosts().filter((post) => post.id !== postId)
+    const nextComments = readLocalComments().filter((comment) => comment.postId !== postId)
+    writePosts(nextPosts)
+    writeComments(nextComments)
     void ensureFirestoreAuth().then(async () => {
       const db = getFirebaseDb()
       await deleteDoc(doc(collection(db, POSTS_COLLECTION), postId))
@@ -180,6 +201,7 @@ export function deleteUserCommunityPostsByAuthor(author: string) {
 
 export function appendUserCommunityComment(comment: CommunityComment) {
   if (firebaseEnabled) {
+    writeComments([...readLocalComments(), comment])
     void ensureFirestoreAuth().then(() =>
       setDoc(doc(collection(getFirebaseDb(), COMMENTS_COLLECTION), comment.id), comment),
     )
