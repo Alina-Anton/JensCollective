@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Shared member directory (readable by signed-in users).
+    match /membersDirectory/{memberUid} {
+      allow read: if isSignedIn();
+      allow create, update: if isOwner(memberUid);
+      allow delete: if false;
+    }
+
+    // Shared events board.
+    match /events/{eventId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.creatorUid == request.auth.uid;
+      allow update, delete: if isSignedIn()
+        && resource.data.creatorUid == request.auth.uid;
+    }
+
+    // Shared community posts.
+    match /communityPosts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.authorUid == request.auth.uid;
+      allow update, delete: if isSignedIn()
+        && resource.data.authorUid == request.auth.uid;
+    }
+
+    // Shared comments for community posts.
+    match /communityComments/{commentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+  }
+}

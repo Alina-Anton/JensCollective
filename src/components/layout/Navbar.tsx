@@ -10,7 +10,7 @@ import { getProfileAvatarUrl, subscribeProfileAvatar } from "@/lib/profileAvatar
 const links = [
   { to: "/", label: "Home" },
   { to: "/events", label: "Events" },
-  { to: "/members", label: "Memebers" },
+  { to: "/members", label: "Members" },
   { to: "/community", label: "Feed" },
   { to: "/me/reservations", label: "Reservations" },
 ];

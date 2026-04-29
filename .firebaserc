@@ -1,5 +1,15 @@
-﻿{
+{
   "projects": {
     "default": "jenscollective-2026"
-  }
+  },
+  "targets": {
+    "jenscollective-2026": {
+      "hosting": {
+        "default": [
+          "jenscollective-2026"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
