@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { GymEvent } from '@/data/mockData'
 import { formatMoney, spotsLeft, members } from '@/data/mockData'
@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button'
 import { ReserveButton } from '@/components/events/ReserveButton'
 import { cn } from '@/lib/cn'
 import { useToast } from '@/hooks/useToast'
+import { cancelUserReservation, upsertUserReservation } from '@/lib/userReservations'
+import { appendEventComment, getEventCommentsByEventId, subscribeEventComments } from '@/lib/userEventComments'
 
 function formatRange(startsAt: string, endsAt: string) {
   const s = new Date(startsAt)
@@ -37,23 +39,14 @@ export function EventCard({
   const [showComments, setShowComments] = useState(false)
   const [showCommentComposer, setShowCommentComposer] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
-  const [postedComments, setPostedComments] = useState<string[]>([])
+  const [commentsVersion, setCommentsVersion] = useState(0)
+  useEffect(() => subscribeEventComments(() => setCommentsVersion((v) => v + 1)), [])
 
   const attendeeNames = members.slice(0, event.reservedCount).map((m) => m.name)
-  const commentsCount = Math.max(1, Math.min(12, Math.round(event.reservedCount / 2)))
-  const seedComments = attendeeNames.slice(0, commentsCount).map((name, i) => ({
-    id: `${event.id}-comment-${i + 1}`,
-    author: name,
-    body: i % 2 === 0 ? 'I am in for this one.' : 'Looking forward to this session.',
-  }))
-  const allComments = [
-    ...seedComments,
-    ...postedComments.map((body, i) => ({
-      id: `${event.id}-posted-${i + 1}`,
-      author: 'Jordan Ellis',
-      body,
-    })),
-  ]
+  const allComments = useMemo(() => {
+    void commentsVersion
+    return getEventCommentsByEventId(event.id)
+  }, [event.id, commentsVersion])
 
   return (
     <Card className={cn('bg-surface overflow-hidden transition hover:border-border-strong', className)}>
@@ -152,12 +145,14 @@ export function EventCard({
             defaultReserved={reservedByUser}
             className="w-full sm:w-full"
             onReserve={(mode) => {
+              upsertUserReservation(event.id, mode === 'waitlist' ? 'waitlist' : 'confirmed')
               toast.push({
                 variant: 'success',
                 title: mode === 'waitlist' ? 'You are on the waitlist' : 'Reservation confirmed',
                 description: `${event.title} — you will receive a calendar invite shortly.`,
               })
             }}
+            onCancel={() => cancelUserReservation(event.id)}
           />
         </div>
 
@@ -252,7 +247,11 @@ export function EventCard({
                 className="h-8 w-full px-3 text-xs"
                 onClick={() => {
                   if (!commentDraft.trim()) return
-                  setPostedComments((prev) => [...prev, commentDraft.trim()])
+                  appendEventComment({
+                    eventId: event.id,
+                    author: 'Member',
+                    body: commentDraft,
+                  })
                   setShowComments(true)
                   toast.push({
                     variant: 'success',

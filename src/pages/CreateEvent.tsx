@@ -15,7 +15,14 @@ import {
   subscribeUserCreatedEvents,
   updateUserCreatedEvent,
 } from "@/lib/userCreatedEvents";
-import { displayNameForUser, initialsForUser } from "@/lib/userDisplay";
+import { preferredDisplayNameForUser } from "@/lib/userDisplay";
+
+function initialsFromName(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase()
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return "HO"
+}
 
 function buildGymEventFromForm(fd: FormData, host: GymEvent["host"]): GymEvent {
   const title = String(fd.get("title") ?? "").trim();
@@ -70,11 +77,12 @@ export function CreateEvent() {
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const hostName = preferredDisplayNameForUser(user);
     const host: GymEvent["host"] = user
       ? {
-          name: displayNameForUser(user),
+          name: hostName,
           title: "Organizer",
-          initials: initialsForUser(user),
+          initials: initialsFromName(hostName),
         }
       : { name: "Host", title: "Organizer", initials: "HO" };
     const event = buildGymEventFromForm(fd, host);

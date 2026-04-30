@@ -40,5 +40,20 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update, delete: if false;
     }
+
+    // Join requests can be submitted from sign-in page before authentication.
+    match /memberRequests/{requestId} {
+      allow create: if true;
+      allow read: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if false;
+    }
+
+    // Shared comments tied to events.
+    match /eventComments/{commentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
   }
 }

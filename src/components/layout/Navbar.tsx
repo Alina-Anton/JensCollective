@@ -11,6 +11,7 @@ const links = [
   { to: "/", label: "Home" },
   { to: "/events", label: "Events" },
   { to: "/members", label: "Members" },
+  { to: "/member-requests", label: "New Member Requests" },
   { to: "/community", label: "Feed" },
   { to: "/me/reservations", label: "Reservations" },
 ];

@@ -10,12 +10,14 @@ export function ReserveButton({
   defaultReserved = false,
   className,
   onReserve,
+  onCancel,
 }: {
   spotsLeft: number
   waitlistEnabled: boolean
   defaultReserved?: boolean
   className?: string
   onReserve?: (mode: 'reserve' | 'waitlist') => void
+  onCancel?: () => void
 }) {
   const [state, setState] = useState<ReserveState>(() => {
     if (spotsLeft <= 0 && !waitlistEnabled) return 'full'
@@ -51,7 +53,10 @@ export function ReserveButton({
         variant="secondary"
         type="button"
         className={cn('w-full sm:w-auto', className)}
-        onClick={() => setState('idle')}
+        onClick={() => {
+          setState('idle')
+          onCancel?.()
+        }}
       >
         Cancel my reservation
       </Button>

@@ -134,3 +134,11 @@ export function upsertMemberDirectoryEntryFromUser(user: AppUser | null) {
   )
 }
 
+export function upsertMemberDirectoryEntry(entry: MemberDirectoryEntry) {
+  upsertLocalMembersCache(entry)
+  if (!firebaseEnabled) return
+  void ensureFirestoreAuth().then(() =>
+    setDoc(doc(collection(getFirebaseDb(), MEMBERS_COLLECTION), entry.uid), entry),
+  )
+}
+

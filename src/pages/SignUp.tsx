@@ -8,6 +8,7 @@ import { getAuthMode } from '@/lib/authMode'
 import { messageForAuthError } from '@/lib/authErrors'
 import { firebaseConsoleAuthenticationUrl } from '@/lib/firebase'
 import { useToast } from '@/hooks/useToast'
+import { hasApprovedMemberRequest, upsertPendingMemberRequest } from '@/lib/memberRequests'
 
 export function SignUp() {
   const navigate = useNavigate()
@@ -17,6 +18,8 @@ export function SignUp() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [agreed, setAgreed] = useState(false)
+  const [referredBy, setReferredBy] = useState('')
+  const [details, setDetails] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
 
@@ -24,12 +27,14 @@ export function SignUp() {
     if (user) navigate('/', { replace: true })
   }, [user, navigate])
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmitRequest(e: React.FormEvent) {
     e.preventDefault()
     const next: Record<string, string> = {}
     if (name.trim().length < 2) next.name = 'Please enter your full name.'
     if (!email.includes('@')) next.email = 'Please enter a valid email address.'
     if (password.length < 8) next.password = 'Use at least 8 characters.'
+    if (referredBy.trim().length < 2) next.referredBy = 'Please tell us who referred you.'
+    if (details.trim().length < 4) next.details = 'Please add a bit more detail.'
     if (!agreed) next.agreed = 'Please confirm you agree to the member guidelines.'
     setErrors(next)
     if (Object.keys(next).length) {
@@ -42,17 +47,33 @@ export function SignUp() {
     }
     setLoading(true)
     try {
+      const approved = hasApprovedMemberRequest(email)
+      if (!approved) {
+        upsertPendingMemberRequest({
+          name,
+          referredBy,
+          details,
+          email: email.trim(),
+        })
+        toast.push({
+          variant: 'success',
+          title: 'Request submitted',
+          description: 'Your request is pending admin approval. Come back after approval to finish account creation.',
+        })
+        return
+      }
+
       await signUpWithEmail(email, password, name.trim())
       toast.push({
         variant: 'success',
         title: 'Account created',
-        description: 'You are signed in. Welcome to Jen’s Collective.',
+        description: 'Your request was approved. Welcome to Jen’s Collective.',
       })
       navigate('/', { replace: true })
     } catch (err) {
       toast.push({
         variant: 'error',
-        title: 'Could not create account',
+        title: 'Could not continue',
         description: messageForAuthError(err),
       })
     } finally {
@@ -90,7 +111,7 @@ export function SignUp() {
             ) : null}
           </div>
 
-          <form className="mt-8 space-y-4 text-left" onSubmit={onSubmit}>
+          <form className="mt-8 space-y-4 text-left" onSubmit={onSubmitRequest}>
             <Input
               label="Full name"
               name="name"
@@ -111,7 +132,7 @@ export function SignUp() {
               hint="This is the email you will use to sign in."
             />
             <Input
-              label="Password"
+              label="Password (used after approval)"
               name="password"
               type="password"
               autoComplete="new-password"
@@ -120,6 +141,23 @@ export function SignUp() {
               error={errors.password}
               hint="At least 8 characters."
             />
+            <Input
+              label="Who Reffered you"
+              name="referredBy"
+              value={referredBy}
+              onChange={(e) => setReferredBy(e.target.value)}
+              error={errors.referredBy}
+            />
+            <label className="block text-sm">
+              <span className="mb-1 block text-fg-soft">Details</span>
+              <textarea
+                name="details"
+                value={details}
+                onChange={(e) => setDetails(e.target.value)}
+                className="min-h-24 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-fg outline-none ring-accent/30 transition focus:ring-2"
+              />
+              {errors.details ? <span className="mt-1 block text-xs font-medium text-danger">{errors.details}</span> : null}
+            </label>
 
             <label className="flex items-start gap-3 rounded-xl border border-border bg-surface/40 p-3 text-xs text-muted">
               <input
@@ -139,33 +177,7 @@ export function SignUp() {
             {errors.agreed ? <p className="text-xs font-medium text-danger">{errors.agreed}</p> : null}
 
             <Button type="submit" className="w-full" loading={loading}>
-              Create account
-            </Button>
-
-            <div className="flex items-center gap-3 py-1">
-              <span className="h-px flex-1 bg-border-strong" />
-              <span className="shrink-0 text-[11px] font-medium tracking-wide text-muted">
-                Or continue with
-              </span>
-              <span className="h-px flex-1 bg-border-strong" />
-            </div>
-
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full"
-              onClick={() =>
-                toast.push({
-                  variant: 'error',
-                  title: 'Not available yet',
-                  description: 'Google sign-in is not enabled. Use email and password.',
-                })
-              }
-            >
-              <span className="inline-flex items-center gap-2">
-                <GoogleMark />
-                Continue with Google
-              </span>
+              Submit request
             </Button>
           </form>
 
@@ -178,28 +190,5 @@ export function SignUp() {
         </div>
       </div>
     </div>
-  )
-}
-
-function GoogleMark() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden>
-      <path
-        fill="#FFC107"
-        d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.223 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917Z"
-      />
-      <path
-        fill="#FF3D00"
-        d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691Z"
-      />
-      <path
-        fill="#4CAF50"
-        d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.86 11.86 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44Z"
-      />
-      <path
-        fill="#1976D2"
-        d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917Z"
-      />
-    </svg>
   )
 }

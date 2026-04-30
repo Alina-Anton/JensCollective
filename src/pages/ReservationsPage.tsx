@@ -1,16 +1,24 @@
-import { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
-import { useAuth } from '@/hooks/useAuth'
 import { getEventById, reservations, formatMoney, spotsLeft } from '@/data/mockData'
+import { getUserReservations, subscribeUserReservations } from '@/lib/userReservations'
 
 export function ReservationsPage() {
-  const navigate = useNavigate()
-  const { signOutUser } = useAuth()
+  const [version, setVersion] = useState(0)
+  useEffect(() => subscribeUserReservations(() => setVersion((v) => v + 1)), [])
+
+  const allReservations = useMemo(() => {
+    void version
+    const byEvent = new Map<string, (typeof reservations)[number]>()
+    for (const r of reservations) byEvent.set(r.eventId, r)
+    for (const r of getUserReservations()) byEvent.set(r.eventId, r)
+    return Array.from(byEvent.values())
+  }, [version])
+
   const upcoming = useMemo(() => {
-    return reservations
+    return allReservations
       .filter((r) => r.status === 'confirmed' || r.status === 'waitlist')
       .map((r) => ({ r, e: getEventById(r.eventId) }))
       .filter(
@@ -18,35 +26,24 @@ export function ReservationsPage() {
           Boolean(x.e),
       )
       .sort((a, b) => new Date(a.e.startsAt).getTime() - new Date(b.e.startsAt).getTime())
-  }, [])
+  }, [allReservations])
 
   const past = useMemo(() => {
-    return reservations
+    return allReservations
       .filter((r) => r.status === 'attended' || r.status === 'cancelled')
       .map((r) => ({ r, e: getEventById(r.eventId) }))
       .filter(
         (x): x is { r: (typeof reservations)[number]; e: NonNullable<ReturnType<typeof getEventById>> } =>
           Boolean(x.e),
       )
-  }, [])
+  }, [allReservations])
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div>
         <p className="max-w-2xl text-sm leading-relaxed text-muted">
           Keep your training rhythm visible—upcoming sessions and history you can trust.
         </p>
-        <Button
-          type="button"
-          variant="secondary"
-          className="sm:self-start"
-          onClick={async () => {
-            await signOutUser()
-            navigate('/sign-in', { replace: true })
-          }}
-        >
-          Sign out
-        </Button>
       </div>
 
       <div className="space-y-6">

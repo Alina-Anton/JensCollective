@@ -1,4 +1,5 @@
 import type { AppUser } from '@/lib/appUser'
+import { getMemberProfileByKeys } from '@/lib/memberProfileStorage'
 
 export function displayNameForUser(user: AppUser | null | undefined): string {
   if (!user) return 'Member'
@@ -13,6 +14,14 @@ export function displayNameForUser(user: AppUser | null | undefined): string {
     .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(' ')
+}
+
+export function preferredDisplayNameForUser(user: AppUser | null | undefined): string {
+  if (!user) return 'Member'
+  const profile = getMemberProfileByKeys([user.uid, user.email ?? undefined, user.displayName ?? undefined])
+  const preferred = profile?.preferredName?.trim()
+  if (preferred) return preferred
+  return displayNameForUser(user)
 }
 
 export function initialsForUser(user: AppUser | null | undefined): string {

@@ -8,6 +8,7 @@ import { EventDetail } from '@/pages/EventDetail'
 import { EventsBoard } from '@/pages/EventsBoard'
 import { MemberProfilePage } from '@/pages/MemberProfilePage'
 import { MembersPage } from '@/pages/MembersPage'
+import { NewMemberRequests } from '@/pages/NewMemberRequests'
 import { NotificationSettings } from '@/pages/NotificationSettings'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { SignIn } from '@/pages/SignIn'
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/events" element={<EventsBoard />} />
           <Route path="/members" element={<MembersPage />} />
+          <Route path="/member-requests" element={<NewMemberRequests />} />
           <Route path="/members/:memberName" element={<MemberProfilePage />} />
           <Route path="/events/new" element={<CreateEvent />} />
           <Route path="/events/:eventId/edit" element={<CreateEvent />} />
