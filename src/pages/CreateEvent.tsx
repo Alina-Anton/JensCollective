@@ -135,7 +135,7 @@ export function CreateEvent() {
             <Input
               label="Title"
               name="title"
-              placeholder="Aurora Flow — breath-led mobility"
+              placeholder="What is this event about?"
               defaultValue={editingEvent?.title}
               required
             />
@@ -177,7 +177,7 @@ export function CreateEvent() {
             <Input
               label="Location"
               name="location"
-              placeholder="Studio B · Harbor Line"
+              placeholder="What is the address?"
               defaultValue={editingEvent?.location}
               required
             />
@@ -189,7 +189,7 @@ export function CreateEvent() {
                 type="number"
                 min={1}
                 placeholder="14"
-                defaultValue={editingEvent?.maxSpots}
+                defaultValue={editingEvent?.maxSpots ?? 0}
                 required
               />
               <Input
@@ -203,7 +203,7 @@ export function CreateEvent() {
                   editingEvent?.priceCents !== null &&
                   editingEvent?.priceCents !== undefined
                     ? Math.round(editingEvent.priceCents / 100)
-                    : undefined
+                    : 0
                 }
               />
             </div>

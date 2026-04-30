@@ -59,7 +59,10 @@ function isGymEvent(x: unknown): x is GymEvent {
 export function getUserCreatedEvents(): GymEvent[] {
   if (firebaseEnabled) {
     const local = readLocalEvents()
-    return [...cachedEvents, ...local].sort(
+    const byId = new Map<string, GymEvent>()
+    for (const event of local) byId.set(event.id, event)
+    for (const event of cachedEvents) byId.set(event.id, event)
+    return Array.from(byId.values()).sort(
       (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
     )
   }
