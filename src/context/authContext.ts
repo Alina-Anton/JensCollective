@@ -14,6 +14,7 @@ export type AuthContextValue = {
   ) => Promise<void>;
   signOutUser: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

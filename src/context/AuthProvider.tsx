@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   onAuthStateChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
@@ -18,10 +19,14 @@ import type { AppUser } from "@/lib/appUser";
 import { firebaseUserToAppUser } from "@/lib/appUser";
 import { getAuthMode } from "@/lib/authMode";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
-import { upsertMemberDirectoryEntryFromUser } from "@/lib/memberDirectory";
+import {
+  deleteMemberDirectoryEntry,
+  upsertMemberDirectoryEntryFromUser,
+} from "@/lib/memberDirectory";
 import {
   getLocalSessionUser,
   LOCAL_AUTH_SESSION_KEY,
+  localDeleteCurrentUser,
   localSignInWithEmail,
   localSignOut,
   localSignUpWithEmail,
@@ -129,6 +134,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [mode],
   );
 
+  const deleteAccount = useCallback(async () => {
+    if (mode === "local") {
+      const current = getLocalSessionUser();
+      if (current?.uid) deleteMemberDirectoryEntry(current.uid);
+      localDeleteCurrentUser();
+      setUser(null);
+      return;
+    }
+    if (!isFirebaseConfigured()) return;
+    const auth = getFirebaseAuth();
+    const current = auth.currentUser;
+    if (!current) return;
+    deleteMemberDirectoryEntry(current.uid);
+    await deleteUser(current);
+    setUser(null);
+  }, [mode]);
+
   const authReady = mode === "local" || isFirebaseConfigured();
 
   const value = useMemo(
@@ -140,6 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUpWithEmail,
       signOutUser,
       sendPasswordReset,
+      deleteAccount,
     }),
     [
       user,
@@ -149,6 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUpWithEmail,
       signOutUser,
       sendPasswordReset,
+      deleteAccount,
     ],
   );
 

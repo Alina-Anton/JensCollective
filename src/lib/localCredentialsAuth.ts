@@ -161,6 +161,14 @@ export function localSignOut() {
   setSessionUid(null);
 }
 
+export function localDeleteCurrentUser() {
+  const uid = sessionUid();
+  if (!uid) return;
+  const next = readUsers().filter((u) => u.uid !== uid);
+  writeUsers(next);
+  setSessionUid(null);
+}
+
 export function getLocalAuthMemberDirectory(): Array<{
   uid: string;
   email: string;

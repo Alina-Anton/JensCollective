@@ -1,11 +1,14 @@
 import {
   collection,
   doc,
+  getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
   setDoc,
   updateDoc,
+  where,
 } from 'firebase/firestore'
 import { getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase'
 import { upsertMemberDirectoryEntry } from '@/lib/memberDirectory'
@@ -118,9 +121,23 @@ export function upsertPendingMemberRequest(input: Omit<MemberRequest, 'id' | 'st
   }
 }
 
-export function hasApprovedMemberRequest(email: string) {
+export async function hasApprovedMemberRequest(email: string) {
   const normalized = email.trim().toLowerCase()
   if (!normalized) return false
+  if (firebaseEnabled) {
+    try {
+      const q = query(
+        collection(getFirebaseDb(), REQUESTS_COLLECTION),
+        where('email', '==', normalized),
+        where('status', '==', 'approved'),
+        limit(1),
+      )
+      const snap = await getDocs(q)
+      if (!snap.empty) return true
+    } catch {
+      // Fallback to local/cached data when remote lookup fails.
+    }
+  }
   return getMemberRequests().some(
     (r) => r.status === 'approved' && (r.email ?? '').trim().toLowerCase() === normalized,
   )

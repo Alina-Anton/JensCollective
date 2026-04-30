@@ -1,4 +1,4 @@
-import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, onSnapshot, setDoc } from "firebase/firestore";
 import {
   ensureFirestoreAuth,
   getFirebaseDb,
@@ -173,5 +173,17 @@ export function upsertMemberDirectoryEntry(entry: MemberDirectoryEntry) {
       doc(collection(getFirebaseDb(), MEMBERS_COLLECTION), entry.uid),
       entry,
     ),
+  );
+}
+
+export function deleteMemberDirectoryEntry(uid: string) {
+  if (!uid) return;
+  const local = readLocalMembersCache().filter((m) => m.uid !== uid);
+  writeLocalMembersCache(local);
+  if (!firebaseEnabled) return;
+  void ensureFirestoreAuth().then(() =>
+    deleteDoc(doc(collection(getFirebaseDb(), MEMBERS_COLLECTION), uid)).catch(() => {
+      // Best effort cleanup only.
+    }),
   );
 }

@@ -47,7 +47,7 @@ export function SignUp() {
     }
     setLoading(true)
     try {
-      const approved = hasApprovedMemberRequest(email)
+      const approved = await hasApprovedMemberRequest(email)
       if (!approved) {
         upsertPendingMemberRequest({
           name,

@@ -13,7 +13,7 @@ service cloud.firestore {
     match /membersDirectory/{memberUid} {
       allow read: if isSignedIn();
       allow create, update: if isOwner(memberUid);
-      allow delete: if false;
+      allow delete: if isOwner(memberUid);
     }
 
     // Shared events board.

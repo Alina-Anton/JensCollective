@@ -28,7 +28,7 @@ function Field({ label, value }: { label: string; value: string }) {
 }
 
 export function ProfilePage() {
-  const { user, signOutUser, sendPasswordReset } = useAuth();
+  const { user, signOutUser, sendPasswordReset, deleteAccount } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const profileKey = user?.uid ?? user?.email ?? user?.displayName ?? "";
@@ -512,14 +512,27 @@ export function ProfilePage() {
             <Button
               variant="danger"
               className="w-full"
-              onClick={() =>
-                toast.push({
-                  variant: "error",
-                  title: "Not available in the app",
-                  description:
-                    "To delete your account, contact your gym admin or support.",
-                })
-              }
+              onClick={async () => {
+                const approved = window.confirm(
+                  "Delete your account permanently? This cannot be undone.",
+                );
+                if (!approved) return;
+                try {
+                  await deleteAccount();
+                  toast.push({
+                    variant: "success",
+                    title: "Account deleted",
+                    description: "Your account has been removed.",
+                  });
+                  navigate("/sign-in", { replace: true });
+                } catch (err) {
+                  toast.push({
+                    variant: "error",
+                    title: "Could not delete account",
+                    description: messageForAuthError(err),
+                  });
+                }
+              }}
             >
               Delete account
             </Button>
