@@ -1,12 +1,12 @@
-import { useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody } from '@/components/ui/Card'
 import { members } from '@/data/mockData'
 import { useAuth } from '@/hooks/useAuth'
 import { isDemoModeEnabled } from '@/lib/demoMode'
-import { getLocalAuthMemberDirectory } from '@/lib/localCredentialsAuth'
+import { getMergedMemberDirectory, subscribeMemberDirectory } from '@/lib/memberDirectory'
 import { findMemberProfileByName, getMemberProfileByKeys } from '@/lib/memberProfileStorage'
 
 function initialsFromName(name: string) {
@@ -55,9 +55,14 @@ export function MemberProfilePage() {
   const { memberName } = useParams()
   const { user } = useAuth()
   const demoMode = isDemoModeEnabled()
+  const [directoryVersion, setDirectoryVersion] = useState(0)
   const decodedRef = decodeURIComponent(memberName ?? '')
+
+  useEffect(() => subscribeMemberDirectory(() => setDirectoryVersion((v) => v + 1)), [])
+
   const member = useMemo(() => {
-    const localMembers = getLocalAuthMemberDirectory()
+    void directoryVersion
+    const allDirectoryMembers = getMergedMemberDirectory()
     const currentUserMember =
       user && user.displayName
         ? [
@@ -69,9 +74,12 @@ export function MemberProfilePage() {
             },
           ]
         : []
-    const merged = [...localMembers, ...(demoMode ? members : []), ...currentUserMember]
-    return merged.find((m) => (m as { uid?: string }).uid === decodedRef || m.name === decodedRef)
-  }, [decodedRef, user, demoMode])
+    const merged = [...allDirectoryMembers, ...(demoMode ? members : []), ...currentUserMember]
+    return merged.find((m) => {
+      const row = m as { uid?: string; email?: string; name?: string }
+      return row.uid === decodedRef || row.email === decodedRef || row.name === decodedRef
+    })
+  }, [decodedRef, user, demoMode, directoryVersion])
   const memberProfile =
     getMemberProfileByKeys([
       decodedRef,
@@ -96,6 +104,12 @@ export function MemberProfilePage() {
 
   return (
     <div className="space-y-8">
+      <div className="mb-[10px]">
+        <Link to="/members" className="text-sm font-medium text-fg-soft transition hover:text-fg">
+          ← Back to Members
+        </Link>
+      </div>
+
       <Card>
         <CardBody className="space-y-5">
           <div className="flex items-center gap-4">
@@ -106,46 +120,55 @@ export function MemberProfilePage() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-border bg-surface/40 p-4">
+          <div className="rounded-2xl border border-border bg-surface/40 p-4 space-y-3">
+            <div>
               <p className="text-xs font-semibold tracking-wide text-muted">Name</p>
-              <p className="mt-2 text-sm text-fg-soft">{member.name}</p>
+              <p className="mt-1 text-sm text-fg-soft">{member.name}</p>
             </div>
-            <div className="rounded-2xl border border-border bg-surface/40 p-4">
+            <div>
               <p className="text-xs font-semibold tracking-wide text-muted">Training Focus</p>
-              <p className="mt-2 text-sm text-fg-soft">
+              <p className="mt-1 text-sm text-fg-soft">
                 {memberProfile?.trainingFocus || (demoMode ? buildTrainingFocus(member.name) : 'Not shared yet')}
               </p>
             </div>
-            <div className="rounded-2xl border border-border bg-surface/40 p-4">
+            <div>
               <p className="text-xs font-semibold tracking-wide text-muted">Belt</p>
-              <p className="mt-2 text-sm text-fg-soft">
+              <p className="mt-1 text-sm text-fg-soft">
                 {memberProfile?.belt || (demoMode ? buildBelt(member.name) : 'Not shared yet')}
               </p>
             </div>
-            <div className="rounded-2xl border border-border bg-surface/40 p-4">
+            <div>
               <p className="text-xs font-semibold tracking-wide text-muted">Hobby</p>
-              <p className="mt-2 text-sm text-fg-soft">
+              <p className="mt-1 text-sm text-fg-soft">
                 {memberProfile?.hobby || (demoMode ? buildHobby(member.name) : 'Not shared yet')}
               </p>
             </div>
-          </div>
-
-          <div className="rounded-2xl border border-border bg-surface/40 p-4">
-            <p className="text-xs font-semibold tracking-wide text-muted">About Me</p>
-            <p className="mt-2 text-sm leading-relaxed text-fg-soft">
-              {memberProfile?.aboutMe ||
-                (demoMode
-                  ? `${member.name} trains consistently and brings positive energy to the mats. Focused on improving technique, supporting teammates, and building confidence through regular training.`
-                  : 'No about section shared yet.')}
-            </p>
+            {memberProfile?.shareContactInfo ? (
+              <>
+                <div>
+                  <p className="text-xs font-semibold tracking-wide text-muted">Phone</p>
+                  <p className="mt-1 text-sm text-fg-soft">{memberProfile.phone || 'Not shared yet'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold tracking-wide text-muted">Emergency Contact</p>
+                  <p className="mt-1 text-sm text-fg-soft">
+                    {memberProfile.emergencyContact || 'Not shared yet'}
+                  </p>
+                </div>
+              </>
+            ) : null}
+            <div>
+              <p className="text-xs font-semibold tracking-wide text-muted">About Me</p>
+              <p className="mt-1 text-sm leading-relaxed text-fg-soft">
+                {memberProfile?.aboutMe ||
+                  (demoMode
+                    ? `${member.name} trains consistently and brings positive energy to the mats. Focused on improving technique, supporting teammates, and building confidence through regular training.`
+                    : 'No about section shared yet.')}
+              </p>
+            </div>
           </div>
         </CardBody>
       </Card>
-
-      <Button to="/members" variant="secondary" className="w-full rounded-2xl">
-        Back to Members
-      </Button>
     </div>
   )
 }

@@ -52,7 +52,10 @@ function isCommunityPost(x: unknown): x is CommunityPost {
 export function getUserCommunityPosts(): CommunityPost[] {
   if (firebaseEnabled) {
     const local = readLocalPosts()
-    return [...cachedPosts, ...local].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    const byId = new Map<string, CommunityPost>()
+    for (const row of local) byId.set(row.id, row)
+    for (const row of cachedPosts) byId.set(row.id, row)
+    return Array.from(byId.values()).sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
   }
   return readLocalPosts()
 }
@@ -95,7 +98,10 @@ function isCommunityComment(x: unknown): x is CommunityComment {
 function getUserCommunityComments(): CommunityComment[] {
   if (firebaseEnabled) {
     const local = readLocalComments()
-    return [...cachedComments, ...local].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+    const byId = new Map<string, CommunityComment>()
+    for (const row of local) byId.set(row.id, row)
+    for (const row of cachedComments) byId.set(row.id, row)
+    return Array.from(byId.values()).sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
   }
   return readLocalComments()
 }

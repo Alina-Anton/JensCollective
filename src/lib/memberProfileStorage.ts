@@ -1,5 +1,8 @@
 export type MemberProfile = {
   preferredName: string
+  phone?: string
+  emergencyContact?: string
+  shareContactInfo?: boolean
   trainingFocus: string
   aboutMe: string
   belt: string

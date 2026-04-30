@@ -19,7 +19,7 @@ import {
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-surface/40 p-4">
+    <div className="space-y-1 py-2">
       <p className="text-xs font-semibold tracking-wide text-muted">{label}</p>
       <p className="mt-2 text-sm font-semibold text-fg">{value}</p>
     </div>
@@ -40,10 +40,15 @@ export function ProfilePage() {
   const [preferredNameDraft, setPreferredNameDraft] = useState(
     () => storedProfile?.preferredName ?? displayNameForUser(user),
   );
-  const [phone, setPhone] = useState("+1 (415) 555-0192");
+  const [phone, setPhone] = useState(storedProfile?.phone ?? "+1 (415) 555-0192");
   const [phoneDraft, setPhoneDraft] = useState(phone);
+  const [shareContactInfo, setShareContactInfo] = useState(
+    storedProfile?.shareContactInfo ?? false,
+  );
+  const [shareContactInfoDraft, setShareContactInfoDraft] =
+    useState(shareContactInfo);
   const [emergencyContact, setEmergencyContact] = useState(
-    "Alex Ellis · +1 (415) 555-0148",
+    storedProfile?.emergencyContact ?? "Name: (000) 000-0000",
   );
   const [emergencyContactDraft, setEmergencyContactDraft] =
     useState(emergencyContact);
@@ -188,9 +193,9 @@ export function ProfilePage() {
               />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-3 border-t border-border pt-4">
               {editingProfile ? (
-                <div className="rounded-2xl border border-border bg-surface/40 p-4">
+                <div className="space-y-1 py-2">
                   <p className="text-xs font-semibold tracking-wide text-muted">
                     Preferred name
                   </p>
@@ -204,7 +209,7 @@ export function ProfilePage() {
                 <Field label="Preferred name" value={preferredName} />
               )}
               {editingProfile ? (
-                <div className="rounded-2xl border border-border bg-surface/40 p-4">
+                <div className="space-y-1 py-2">
                   <p className="text-xs font-semibold tracking-wide text-muted">
                     Phone (SMS)
                   </p>
@@ -218,7 +223,7 @@ export function ProfilePage() {
                 <Field label="Phone (SMS)" value={phone} />
               )}
               {editingProfile ? (
-                <div className="rounded-2xl border border-border bg-surface/40 p-4">
+                <div className="space-y-1 py-2">
                   <p className="text-xs font-semibold tracking-wide text-muted">
                     Emergency contact
                   </p>
@@ -227,12 +232,21 @@ export function ProfilePage() {
                     onChange={(e) => setEmergencyContactDraft(e.target.value)}
                     className="mt-2 h-10 w-full border border-border bg-surface px-3 text-sm text-fg outline-none focus:border-accent/45 focus:ring-2 focus:ring-accent/20"
                   />
+                  <label className="mt-3 inline-flex items-center gap-2 text-xs text-fg-soft">
+                    <input
+                      type="checkbox"
+                      className="size-4 rounded border-border bg-surface accent-accent"
+                      checked={shareContactInfoDraft}
+                      onChange={(e) => setShareContactInfoDraft(e.target.checked)}
+                    />
+                    Show phone and emergency contact on Members page
+                  </label>
                 </div>
               ) : (
                 <Field label="Emergency contact" value={emergencyContact} />
               )}
               {editingProfile ? (
-                <div className="rounded-2xl border border-border bg-surface/40 p-4">
+                <div className="space-y-1 py-2">
                   <p className="text-xs font-semibold tracking-wide text-muted">
                     Training focus
                   </p>
@@ -245,9 +259,9 @@ export function ProfilePage() {
               ) : (
                 <Field label="Training focus" value={trainingFocus} />
               )}
-            </div>
+            
 
-            <div className="rounded-2xl border border-border bg-surface/40 p-4">
+            <div className="space-y-2 py-2">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs font-semibold tracking-wide text-muted">
                   About Me
@@ -296,6 +310,7 @@ export function ProfilePage() {
                 </div>
               )}
             </div>
+            </div>
             {editingProfile ? (
               <div className="flex w-full gap-2">
                 <Button
@@ -306,6 +321,7 @@ export function ProfilePage() {
                     setPreferredNameDraft(preferredName);
                     setPhoneDraft(phone);
                     setEmergencyContactDraft(emergencyContact);
+                    setShareContactInfoDraft(shareContactInfo);
                     setTrainingFocusDraft(trainingFocus);
                     setAboutDraft(aboutMe);
                     setBeltDraft(belt);
@@ -322,19 +338,25 @@ export function ProfilePage() {
                   className="h-9 w-full px-3"
                   onClick={() => {
                     const nextPreferredName = preferredNameDraft.trim();
+                    const nextPhone = phoneDraft.trim();
+                    const nextEmergency = emergencyContactDraft.trim();
                     const nextTrainingFocus = trainingFocusDraft.trim();
                     const nextAbout = aboutDraft.trim();
                     const nextBelt = beltDraft.trim();
                     const nextHobby = hobbyDraft.trim();
                     setPreferredName(nextPreferredName);
-                    setPhone(phoneDraft.trim());
-                    setEmergencyContact(emergencyContactDraft.trim());
+                    setPhone(nextPhone);
+                    setEmergencyContact(nextEmergency);
+                    setShareContactInfo(shareContactInfoDraft);
                     setTrainingFocus(nextTrainingFocus);
                     setAboutMe(nextAbout);
                     setBelt(nextBelt);
                     setHobby(nextHobby);
                     saveMemberProfile(profileKey, {
                       preferredName: nextPreferredName,
+                      phone: nextPhone,
+                      emergencyContact: nextEmergency,
+                      shareContactInfo: shareContactInfoDraft,
                       trainingFocus: nextTrainingFocus,
                       aboutMe: nextAbout,
                       belt: nextBelt,
@@ -343,6 +365,9 @@ export function ProfilePage() {
                     if (user?.email) {
                       saveMemberProfile(user.email, {
                         preferredName: nextPreferredName,
+                        phone: nextPhone,
+                        emergencyContact: nextEmergency,
+                        shareContactInfo: shareContactInfoDraft,
                         trainingFocus: nextTrainingFocus,
                         aboutMe: nextAbout,
                         belt: nextBelt,
@@ -352,6 +377,9 @@ export function ProfilePage() {
                     if (user?.displayName) {
                       saveMemberProfile(user.displayName, {
                         preferredName: nextPreferredName,
+                        phone: nextPhone,
+                        emergencyContact: nextEmergency,
+                        shareContactInfo: shareContactInfoDraft,
                         trainingFocus: nextTrainingFocus,
                         aboutMe: nextAbout,
                         belt: nextBelt,
@@ -374,6 +402,7 @@ export function ProfilePage() {
                   setPreferredNameDraft(preferredName);
                   setPhoneDraft(phone);
                   setEmergencyContactDraft(emergencyContact);
+                  setShareContactInfoDraft(shareContactInfo);
                   setTrainingFocusDraft(trainingFocus);
                   setAboutDraft(aboutMe);
                   setBeltDraft(belt);
