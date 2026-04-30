@@ -75,10 +75,15 @@ export function MemberProfilePage() {
           ]
         : []
     const merged = [...allDirectoryMembers, ...(demoMode ? members : []), ...currentUserMember]
-    return merged.find((m) => {
+    const matches = merged.filter((m) => {
       const row = m as { uid?: string; email?: string; name?: string }
       return row.uid === decodedRef || row.email === decodedRef || row.name === decodedRef
     })
+    if (!matches.length) return undefined
+    return (
+      matches.find((m) => Boolean((m as { avatarUrl?: string }).avatarUrl)) ??
+      matches[0]
+    )
   }, [decodedRef, user, demoMode, directoryVersion])
   const memberProfile =
     getMemberProfileByKeys([
@@ -116,7 +121,6 @@ export function MemberProfilePage() {
             <Avatar initials={member.initials} src={member.avatarUrl} title={member.name} className="size-14 text-base" />
             <div>
               <p className="text-lg font-semibold text-fg">{member.name}</p>
-              <p className="text-sm text-muted">Gym member</p>
             </div>
           </div>
 

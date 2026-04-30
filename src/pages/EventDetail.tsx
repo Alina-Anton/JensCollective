@@ -165,10 +165,6 @@ export function EventDetail() {
             <h2 className="font-display text-lg text-fg">About this session</h2>
             <div className="mt-3 space-y-3 text-sm leading-relaxed text-fg-soft">
               <p>{event.longDescription}</p>
-              <p className="text-muted">
-                Visual moodboard for this class:{" "}
-                <span className="text-fg-soft">{event.imageHint}</span>.
-              </p>
             </div>
           </div>
 

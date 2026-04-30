@@ -126,6 +126,8 @@ export function subscribeUserReservations(onChange: () => void) {
         const q = query(collection(getFirebaseDb(), RESERVATIONS_COLLECTION), orderBy('createdAt', 'desc'))
         firestoreUnsub = onSnapshot(q, (snap) => {
           cachedReservations = snap.docs.map((d) => d.data()).filter(isStoredReservation)
+          // Keep local cache aligned with remote deletes/updates across devices.
+          write(cachedReservations)
           for (const fn of subscribers) fn()
         })
       })

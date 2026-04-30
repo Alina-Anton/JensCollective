@@ -6,20 +6,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/cn";
 import { displayNameForUser, initialsForUser } from "@/lib/userDisplay";
 import { getProfileAvatarUrl, subscribeProfileAvatar } from "@/lib/profileAvatarStorage";
+import { isAdminUser } from "@/lib/adminUsers";
 
 const links = [
   { to: "/", label: "Home" },
-  { to: "/events", label: "Events" },
-  { to: "/members", label: "Members" },
-  { to: "/member-requests", label: "New Member Requests" },
-  { to: "/community", label: "Feed" },
   { to: "/me/reservations", label: "Reservations" },
+  { to: "/events", label: "Events" },
+  { to: "/community", label: "Feed" },
+  { to: "/members", label: "Members" },
+  { to: "/member-requests", label: "New Members Request" },
 ];
 
 export function Navbar() {
   const { user } = useAuth();
+  const isAdmin = isAdminUser(user);
   const [open, setOpen] = useState(false);
   const [avatarSrc, setAvatarSrc] = useState<string | null>(() => getProfileAvatarUrl());
+  const visibleLinks = isAdmin ? links : links.filter((l) => l.to !== "/member-requests");
 
   useEffect(() => {
     return subscribeProfileAvatar(() => setAvatarSrc(getProfileAvatarUrl()));
@@ -41,7 +44,7 @@ export function Navbar() {
         <Logo />
 
         <nav className="hidden items-center gap-1 md:flex">
-          {links.map((l) => (
+          {visibleLinks.map((l) => (
             <NavLink
               key={l.to}
               to={l.to}
@@ -65,13 +68,15 @@ export function Navbar() {
           >
             Create event
           </Link>
-          <Link
-            to="/settings/notifications"
-            className="hidden rounded-xl p-2 text-fg-soft transition hover:bg-surface-2 hover:text-fg md:inline-flex"
-            aria-label="Notification settings"
+          <button
+            type="button"
+            disabled
+            className="hidden rounded-xl p-2 text-fg-soft opacity-60 md:inline-flex"
+            aria-label="Notifications (coming soon)"
+            title="Notifications (coming soon)"
           >
             <BellIcon />
-          </Link>
+          </button>
           <Link
             to="/me/profile"
             className="inline-flex items-center gap-2 px-0 py-0.5 transition"
@@ -92,7 +97,7 @@ export function Navbar() {
       {open ? (
         <div className="border-t border-border bg-surface/95 px-4 py-3 md:hidden">
           <div className="mx-auto flex max-w-6xl flex-col gap-2">
-            {links.map((l) => (
+            {visibleLinks.map((l) => (
               <NavLink
                 key={l.to}
                 to={l.to}
@@ -108,13 +113,13 @@ export function Navbar() {
                 {l.label}
               </NavLink>
             ))}
-            <Link
-              to="/settings/notifications"
-              onClick={() => setOpen(false)}
-              className="rounded-xl px-3 py-2 text-sm font-semibold text-fg-soft hover:bg-surface-2"
+            <button
+              type="button"
+              disabled
+              className="rounded-xl px-3 py-2 text-left text-sm font-semibold text-fg-soft opacity-60"
             >
-              Notifications
-            </Link>
+              Notifications (coming soon)
+            </button>
             <Link
               to="/me/profile"
               onClick={() => setOpen(false)}

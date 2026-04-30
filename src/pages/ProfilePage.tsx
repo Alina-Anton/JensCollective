@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/useToast";
 import { messageForAuthError } from "@/lib/authErrors";
 import { isDemoModeEnabled } from "@/lib/demoMode";
 import { displayNameForUser, initialsForUser } from "@/lib/userDisplay";
+import { upsertMemberDirectoryEntry } from "@/lib/memberDirectory";
 import {
   getProfileAvatarUrl,
   setProfileAvatarUrl,
@@ -91,11 +92,45 @@ export function ProfilePage() {
       if (typeof result !== "string") return;
       setProfileAvatarUrl(result);
       setAvatarDataUrl(result);
+      if (user?.uid) {
+        const name = preferredName.trim() || displayNameForUser(user);
+        upsertMemberDirectoryEntry({
+          uid: user.uid,
+          email: user.email?.trim().toLowerCase() ?? "",
+          name,
+          initials:
+            name
+              .split(/\s+/)
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((part) => part[0]?.toUpperCase() ?? "")
+              .join("") || initialsForUser(user),
+          avatarUrl: result,
+        });
+      }
     };
     reader.readAsDataURL(file);
   }
 
   const avatarSrc = (avatarDataUrl ?? user?.photoURL) || undefined;
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    const name = preferredName.trim() || displayNameForUser(user);
+    upsertMemberDirectoryEntry({
+      uid: user.uid,
+      email: user.email?.trim().toLowerCase() ?? "",
+      name,
+      initials:
+        name
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((part) => part[0]?.toUpperCase() ?? "")
+          .join("") || initialsForUser(user),
+      avatarUrl: avatarDataUrl ?? "",
+    });
+  }, [user?.uid, user?.email, preferredName, avatarDataUrl, user]);
 
   useEffect(() => {
     if (!editingProfile || !aboutInputRef.current) return;
@@ -172,6 +207,22 @@ export function ProfilePage() {
                       onClick={() => {
                         setProfileAvatarUrl(null);
                         setAvatarDataUrl(null);
+                        if (user?.uid) {
+                          const name = preferredName.trim() || displayNameForUser(user);
+                          upsertMemberDirectoryEntry({
+                            uid: user.uid,
+                            email: user.email?.trim().toLowerCase() ?? "",
+                            name,
+                            initials:
+                              name
+                                .split(/\s+/)
+                                .filter(Boolean)
+                                .slice(0, 2)
+                                .map((part) => part[0]?.toUpperCase() ?? "")
+                                .join("") || initialsForUser(user),
+                            avatarUrl: "",
+                          });
+                        }
                         setAvatarMenuOpen(false);
                       }}
                     >

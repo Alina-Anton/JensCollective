@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import {
@@ -8,13 +9,20 @@ import {
   type MemberRequest,
 } from '@/lib/memberRequests'
 import { useToast } from '@/hooks/useToast'
+import { useAuth } from '@/hooks/useAuth'
+import { isAdminUser } from '@/lib/adminUsers'
 
 export function NewMemberRequests() {
+  const { user } = useAuth()
   const toast = useToast()
   const [version, setVersion] = useState(0)
   const [approvingId, setApprovingId] = useState<string | null>(null)
 
   useEffect(() => subscribeMemberRequests(() => setVersion((v) => v + 1)), [])
+
+  if (!isAdminUser(user)) {
+    return <Navigate to="/" replace />
+  }
 
   const requests = useMemo(() => getMemberRequests(), [version])
   const pending = requests.filter((r) => r.status === 'pending')

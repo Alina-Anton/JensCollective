@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { GymEvent } from '@/data/mockData'
-import { formatMoney, spotsLeft, members } from '@/data/mockData'
+import { formatMoney, spotsLeft } from '@/data/mockData'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ReserveButton } from '@/components/events/ReserveButton'
@@ -9,7 +9,7 @@ import { cn } from '@/lib/cn'
 import { useToast } from '@/hooks/useToast'
 import { useAuth } from '@/hooks/useAuth'
 import { displayNameForUser } from '@/lib/userDisplay'
-import { cancelUserReservation, upsertUserReservation } from '@/lib/userReservations'
+import { cancelUserReservation, getReservationNamesByEventId, upsertUserReservation } from '@/lib/userReservations'
 import { appendEventComment, getEventCommentsByEventId, subscribeEventComments } from '@/lib/userEventComments'
 
 function formatRange(startsAt: string, endsAt: string) {
@@ -45,7 +45,7 @@ export function EventCard({
   const [commentsVersion, setCommentsVersion] = useState(0)
   useEffect(() => subscribeEventComments(() => setCommentsVersion((v) => v + 1)), [])
 
-  const attendeeNames = members.slice(0, event.reservedCount).map((m) => m.name)
+  const attendeeNames = getReservationNamesByEventId(event.id)
   const allComments = useMemo(() => {
     void commentsVersion
     return getEventCommentsByEventId(event.id)

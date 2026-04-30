@@ -10,7 +10,6 @@ import {
   appendUserCommunityComment,
   appendUserCommunityPost,
   deleteUserCommunityPost,
-  deleteUserCommunityPostsByAuthor,
   getCommunityCommentsByPostId,
   getMergedCommunityPosts,
   subscribeUserCommunityPosts,
@@ -33,9 +32,6 @@ export function Community() {
   }, [postsVersion])
 
   useEffect(() => subscribeUserCommunityPosts(() => setPostsVersion((v) => v + 1)), [])
-  useEffect(() => {
-    deleteUserCommunityPostsByAuthor('alinanton13')
-  }, [])
 
   function getPostMessages(postId: string) {
     return getCommunityCommentsByPostId(postId)
