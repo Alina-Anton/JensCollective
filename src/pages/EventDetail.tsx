@@ -8,15 +8,15 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ReserveButton } from "@/components/events/ReserveButton";
 import {
   getEventById,
-  members,
-  reservations,
   spotsLeft,
 } from "@/data/mockData";
 import { formatDateTimeRange } from "@/lib/format";
 import { useToast } from "@/hooks/useToast";
 import {
   cancelUserReservation,
+  getReservationNamesByEventId,
   getReservedEventIdSet,
+  subscribeUserReservations,
   upsertUserReservation,
 } from "@/lib/userReservations";
 import {
@@ -27,13 +27,6 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { displayNameForUser } from "@/lib/userDisplay";
 
-const reservedSet = new Set([
-  ...reservations
-    .filter((r) => r.status === "confirmed" || r.status === "waitlist")
-    .map((r) => r.eventId),
-  ...getReservedEventIdSet(),
-]);
-
 const COMMENTS_PER_PAGE = 5;
 
 export function EventDetail() {
@@ -42,6 +35,7 @@ export function EventDetail() {
   const { user } = useAuth();
   const [threadPage, setThreadPage] = useState(1);
   const [commentsVersion, setCommentsVersion] = useState(0);
+  const [reservationsVersion, setReservationsVersion] = useState(0);
   const [showCommentComposer, setShowCommentComposer] = useState(false);
   const [commentDraft, setCommentDraft] = useState("");
   const event = eventId ? getEventById(eventId) : undefined;
@@ -49,7 +43,12 @@ export function EventDetail() {
     () => subscribeEventComments(() => setCommentsVersion((v) => v + 1)),
     [],
   );
+  useEffect(
+    () => subscribeUserReservations(() => setReservationsVersion((v) => v + 1)),
+    [],
+  );
   void commentsVersion;
+  void reservationsVersion;
   const discussionThread = event ? getEventCommentsByEventId(event.id) : [];
   const totalPages = Math.max(
     1,
@@ -80,16 +79,9 @@ export function EventDetail() {
     event.startsAt,
     event.endsAt,
   );
-  const reservedByUser = reservedSet.has(event.id);
-  const mockReservedNames = members
-    .slice(0, event.reservedCount)
-    .map((m) => m.name);
-  const reservedNames = Array.from(
-    new Set([
-      ...mockReservedNames,
-      ...(reservedByUser ? [displayNameForUser(user)] : []),
-    ]),
-  ).filter(Boolean);
+  const currentUid = user?.uid ?? "";
+  const reservedByUser = Boolean(currentUid) && getReservedEventIdSet(currentUid).has(event.id);
+  const reservedNames = getReservationNamesByEventId(event.id);
   const reservedPeople = reservedNames.map((name) => ({
     name,
     initials:
@@ -215,9 +207,11 @@ export function EventDetail() {
             defaultReserved={reservedByUser}
             className="w-full"
             onReserve={(mode) => {
+              if (!currentUid) return;
               upsertUserReservation(
                 event.id,
                 mode === "waitlist" ? "waitlist" : "confirmed",
+                { uid: currentUid, name: displayNameForUser(user) },
               );
               toast.push({
                 variant: "success",
@@ -228,7 +222,10 @@ export function EventDetail() {
                 description: `${event.title} — calendar invite queued.`,
               });
             }}
-            onCancel={() => cancelUserReservation(event.id)}
+            onCancel={() => {
+              if (!user?.uid) return;
+              cancelUserReservation(event.id, user.uid);
+            }}
           />
           {left <= 0 && event.waitlistEnabled ? (
             <p className="text-xs text-muted">

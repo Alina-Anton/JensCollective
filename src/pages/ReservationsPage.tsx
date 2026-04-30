@@ -3,9 +3,11 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { getEventById, reservations, formatMoney, spotsLeft } from '@/data/mockData'
+import { useAuth } from '@/hooks/useAuth'
 import { getUserReservations, subscribeUserReservations } from '@/lib/userReservations'
 
 export function ReservationsPage() {
+  const { user } = useAuth()
   const [version, setVersion] = useState(0)
   useEffect(() => subscribeUserReservations(() => setVersion((v) => v + 1)), [])
 
@@ -13,9 +15,9 @@ export function ReservationsPage() {
     void version
     const byEvent = new Map<string, (typeof reservations)[number]>()
     for (const r of reservations) byEvent.set(r.eventId, r)
-    for (const r of getUserReservations()) byEvent.set(r.eventId, r)
+    for (const r of getUserReservations(user?.uid ?? undefined)) byEvent.set(r.eventId, r)
     return Array.from(byEvent.values())
-  }, [version])
+  }, [version, user?.uid])
 
   const upcoming = useMemo(() => {
     return allReservations

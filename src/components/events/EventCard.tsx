@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button'
 import { ReserveButton } from '@/components/events/ReserveButton'
 import { cn } from '@/lib/cn'
 import { useToast } from '@/hooks/useToast'
+import { useAuth } from '@/hooks/useAuth'
+import { displayNameForUser } from '@/lib/userDisplay'
 import { cancelUserReservation, upsertUserReservation } from '@/lib/userReservations'
 import { appendEventComment, getEventCommentsByEventId, subscribeEventComments } from '@/lib/userEventComments'
 
@@ -35,6 +37,7 @@ export function EventCard({
 }) {
   const left = spotsLeft(event)
   const toast = useToast()
+  const { user } = useAuth()
   const [showAttendees, setShowAttendees] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const [showCommentComposer, setShowCommentComposer] = useState(false)
@@ -145,14 +148,21 @@ export function EventCard({
             defaultReserved={reservedByUser}
             className="w-full sm:w-full"
             onReserve={(mode) => {
-              upsertUserReservation(event.id, mode === 'waitlist' ? 'waitlist' : 'confirmed')
+              if (!user?.uid) return
+              upsertUserReservation(event.id, mode === 'waitlist' ? 'waitlist' : 'confirmed', {
+                uid: user.uid,
+                name: displayNameForUser(user),
+              })
               toast.push({
                 variant: 'success',
                 title: mode === 'waitlist' ? 'You are on the waitlist' : 'Reservation confirmed',
                 description: `${event.title} — you will receive a calendar invite shortly.`,
               })
             }}
-            onCancel={() => cancelUserReservation(event.id)}
+            onCancel={() => {
+              if (!user?.uid) return
+              cancelUserReservation(event.id, user.uid)
+            }}
           />
         </div>
 

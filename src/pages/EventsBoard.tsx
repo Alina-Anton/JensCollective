@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import type { EventCategory } from "@/data/mockData";
-import { getMergedEvents, reservations } from "@/data/mockData";
+import { getMergedEvents } from "@/data/mockData";
 import { useAuth } from "@/hooks/useAuth";
 import {
   deleteUserCreatedEvent,
@@ -13,11 +13,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { EventCardSkeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/hooks/useToast";
-const reservedSet = new Set(
-  reservations
-    .filter((r) => r.status === "confirmed" || r.status === "waitlist")
-    .map((r) => r.eventId),
-);
+import { getReservedEventIdSet, subscribeUserReservations } from "@/lib/userReservations";
 
 function startOfDay(d: Date) {
   const x = new Date(d);
@@ -43,6 +39,7 @@ export function EventsBoard() {
   const [datePreset, setDatePreset] = useState<"any" | "week" | "today">("any");
   const [busy, setBusy] = useState(true);
   const [catalogVersion, setCatalogVersion] = useState(0);
+  const [reservationsVersion, setReservationsVersion] = useState(0);
 
   useEffect(() => {
     const t = window.setTimeout(() => setBusy(false), 520);
@@ -53,11 +50,19 @@ export function EventsBoard() {
     () => subscribeUserCreatedEvents(() => setCatalogVersion((v) => v + 1)),
     [],
   );
+  useEffect(
+    () => subscribeUserReservations(() => setReservationsVersion((v) => v + 1)),
+    [],
+  );
 
   const allEvents = useMemo(() => {
     void catalogVersion;
     return getMergedEvents();
   }, [catalogVersion]);
+  const reservedSet = useMemo(() => {
+    void reservationsVersion;
+    return getReservedEventIdSet(user?.uid ?? undefined);
+  }, [reservationsVersion, user?.uid]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
