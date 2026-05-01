@@ -152,7 +152,7 @@ export function EventCard({
           <div>
             <dt className="text-xs font-semibold tracking-wide text-muted">Spots</dt>
             <dd className="mt-1 text-fg-soft">
-              {reservedCount}/{event.maxSpots}
+              {left}/{event.maxSpots} available
             </dd>
           </div>
         </dl>

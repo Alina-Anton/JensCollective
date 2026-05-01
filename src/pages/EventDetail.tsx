@@ -159,6 +159,14 @@ export function EventDetail() {
               Arrive 10 minutes early to settle in.
             </p>
           </div>
+          <div>
+            <p className="text-xs font-semibold tracking-wide text-muted">
+              Spots
+            </p>
+            <p className="mt-2 text-sm font-semibold text-fg">
+              {left}/{event.maxSpots} available
+            </p>
+          </div>
         </div>
 
         <div className="space-y-5 border-t border-border p-6 sm:p-8">
