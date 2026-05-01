@@ -2,7 +2,7 @@ import type { AppUser } from '@/lib/appUser'
 import { preferredDisplayNameForUser, displayNameForUser } from '@/lib/userDisplay'
 
 const ADMIN_NAMES = new Set(['jen clanton', 'alina anton'])
-const ADMIN_EMAILS = new Set(['aa.in.labs@gmail.com', 'jen.clanton@gmail.com'])
+const ADMIN_EMAILS = new Set(['aa.in.labs@gmail.com', 'jen.clanton@gmail.com', 'alinanton13@gmail.com'])
 
 function normalize(value: string) {
   return value.trim().toLowerCase()

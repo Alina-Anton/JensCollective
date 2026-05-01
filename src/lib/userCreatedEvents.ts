@@ -110,13 +110,12 @@ export function updateUserCreatedEvent(eventId: string, event: GymEvent) {
   writeUserCreatedEvents(next)
 }
 
-export function deleteUserCreatedEvent(eventId: string) {
+export async function deleteUserCreatedEvent(eventId: string) {
   if (firebaseEnabled) {
+    await ensureFirestoreAuth()
+    await deleteDoc(doc(collection(getFirebaseDb(), EVENTS_COLLECTION), eventId))
     const nextLocal = readLocalEvents().filter((row) => row.id !== eventId)
     writeUserCreatedEvents(nextLocal)
-    void ensureFirestoreAuth().then(() =>
-      deleteDoc(doc(collection(getFirebaseDb(), EVENTS_COLLECTION), eventId)),
-    )
     return
   }
   const next = getUserCreatedEvents().filter((row) => row.id !== eventId)
@@ -134,6 +133,8 @@ export function subscribeUserCreatedEvents(onChange: () => void) {
             .map((d) => d.data())
             .filter(isGymEvent)
             .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
+          // Keep local cache aligned with remote deletes/updates across devices.
+          writeUserCreatedEvents(cachedEvents)
           for (const fn of subscribers) fn()
         })
       })

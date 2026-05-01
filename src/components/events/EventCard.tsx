@@ -26,6 +26,7 @@ export function EventCard({
   reservedByUser,
   hideTitle = false,
   editable = false,
+  deletable = false,
   onDelete,
 }: {
   event: GymEvent
@@ -33,6 +34,7 @@ export function EventCard({
   reservedByUser?: boolean
   hideTitle?: boolean
   editable?: boolean
+  deletable?: boolean
   onDelete?: () => void
 }) {
   const left = spotsLeft(event)
@@ -64,47 +66,51 @@ export function EventCard({
                 >
                   {event.title}
                 </Link>
-                {editable ? (
+                {editable || deletable ? (
                   <div className="flex items-center gap-1">
-                    <Link
-                      to={`/events/${event.id}/edit`}
-                      aria-label={`Edit event ${event.title}`}
-                      title="Edit event"
-                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-fg-soft transition hover:bg-surface-2/60 hover:text-fg"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                        <path
-                          d="M4 20h4l10-10-4-4L4 16v4z"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M13 7l4 4"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </Link>
-                    <button
-                      type="button"
-                      aria-label={`Delete event ${event.title}`}
-                      title="Delete event"
-                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-fg-soft transition hover:bg-surface-2/60 hover:text-danger"
-                      onClick={onDelete}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                        <path
-                          d="M18 6L6 18M6 6l12 12"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    </button>
+                    {editable ? (
+                      <Link
+                        to={`/events/${event.id}/edit`}
+                        aria-label={`Edit event ${event.title}`}
+                        title="Edit event"
+                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-fg-soft transition hover:bg-surface-2/60 hover:text-fg"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                          <path
+                            d="M4 20h4l10-10-4-4L4 16v4z"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M13 7l4 4"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </Link>
+                    ) : null}
+                    {deletable ? (
+                      <button
+                        type="button"
+                        aria-label={`Delete event ${event.title}`}
+                        title="Delete event"
+                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-fg-soft transition hover:bg-surface-2/60 hover:text-danger"
+                        onClick={onDelete}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                          <path
+                            d="M18 6L6 18M6 6l12 12"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

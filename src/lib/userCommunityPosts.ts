@@ -238,6 +238,8 @@ export function subscribeUserCommunityPosts(onChange: () => void) {
               .map((d) => d.data())
               .filter(isCommunityPost)
               .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+            // Keep local cache aligned with remote deletes/updates across devices.
+            writePosts(cachedPosts)
             for (const fn of subscribers) fn()
           },
         )
@@ -245,6 +247,8 @@ export function subscribeUserCommunityPosts(onChange: () => void) {
           query(collection(db, COMMENTS_COLLECTION), orderBy('at', 'asc')),
           (snap) => {
             cachedComments = snap.docs.map((d) => d.data()).filter(isCommunityComment)
+            // Keep local cache aligned with remote deletes/updates across devices.
+            writeComments(cachedComments)
             for (const fn of subscribers) fn()
           },
         )

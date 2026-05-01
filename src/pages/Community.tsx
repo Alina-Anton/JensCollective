@@ -5,6 +5,7 @@ import { Card, CardBody } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
+import { isAdminUser } from '@/lib/adminUsers'
 import { formatRelative } from '@/lib/format'
 import {
   appendUserCommunityComment,
@@ -18,6 +19,7 @@ import {
 
 export function Community() {
   const { user } = useAuth()
+  const admin = isAdminUser(user)
   const toast = useToast()
   const [draft, setDraft] = useState('')
   const [postsVersion, setPostsVersion] = useState(0)
@@ -37,10 +39,14 @@ export function Community() {
     return getCommunityCommentsByPostId(postId)
   }
 
-  function canManagePost(post: (typeof posts)[number]) {
+  function canEditPost(post: (typeof posts)[number]) {
     if (post.authorUid && user?.uid) return post.authorUid === user.uid
     const userName = user?.displayName?.trim().toLowerCase()
     return Boolean(userName && post.author.trim().toLowerCase() === userName)
+  }
+
+  function canDeletePost(post: (typeof posts)[number]) {
+    return admin || canEditPost(post)
   }
 
   return (
@@ -117,61 +123,65 @@ export function Community() {
                     <Avatar initials={p.initials} title={p.author} />
                     <div className="flex min-w-0 items-center gap-2">
                       <p className="truncate text-sm font-semibold text-fg">{p.author}</p>
-                      {canManagePost(p) && editingPostId !== p.id ? (
+                      {(canEditPost(p) || canDeletePost(p)) && editingPostId !== p.id ? (
                         <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            aria-label="Edit post"
-                            title="Edit post"
-                            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-fg-soft transition hover:bg-surface-2/60 hover:text-fg"
-                            onClick={() => {
-                              setEditingPostId(p.id)
-                              setEditDrafts((prev) => ({ ...prev, [p.id]: p.body }))
-                            }}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                              <path
-                                d="M4 20h4l10-10-4-4L4 16v4z"
-                                stroke="currentColor"
-                                strokeWidth="1.8"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                              <path
-                                d="M13 7l4 4"
-                                stroke="currentColor"
-                                strokeWidth="1.8"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            aria-label="Delete post"
-                            title="Delete post"
-                            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-fg-soft transition hover:bg-surface-2/60 hover:text-danger"
-                            onClick={() => {
-                              deleteUserCommunityPost(p.id)
-                              if (openCommentsPostId === p.id) setOpenCommentsPostId(null)
-                              if (commentComposerPostId === p.id) setCommentComposerPostId(null)
-                              if (editingPostId === p.id) setEditingPostId(null)
-                              toast.push({
-                                variant: 'success',
-                                title: 'Post deleted',
-                                description: 'Your update was removed.',
-                              })
-                            }}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                              <path
-                                d="M18 6L6 18M6 6l12 12"
-                                stroke="currentColor"
-                                strokeWidth="1.8"
-                                strokeLinecap="round"
-                              />
-                            </svg>
-                          </button>
+                          {canEditPost(p) ? (
+                            <button
+                              type="button"
+                              aria-label="Edit post"
+                              title="Edit post"
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-fg-soft transition hover:bg-surface-2/60 hover:text-fg"
+                              onClick={() => {
+                                setEditingPostId(p.id)
+                                setEditDrafts((prev) => ({ ...prev, [p.id]: p.body }))
+                              }}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                                <path
+                                  d="M4 20h4l10-10-4-4L4 16v4z"
+                                  stroke="currentColor"
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                                <path
+                                  d="M13 7l4 4"
+                                  stroke="currentColor"
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </button>
+                          ) : null}
+                          {canDeletePost(p) ? (
+                            <button
+                              type="button"
+                              aria-label="Delete post"
+                              title="Delete post"
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-fg-soft transition hover:bg-surface-2/60 hover:text-danger"
+                              onClick={() => {
+                                deleteUserCommunityPost(p.id)
+                                if (openCommentsPostId === p.id) setOpenCommentsPostId(null)
+                                if (commentComposerPostId === p.id) setCommentComposerPostId(null)
+                                if (editingPostId === p.id) setEditingPostId(null)
+                                toast.push({
+                                  variant: 'success',
+                                  title: 'Post deleted',
+                                  description: 'Your update was removed.',
+                                })
+                              }}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                                <path
+                                  d="M18 6L6 18M6 6l12 12"
+                                  stroke="currentColor"
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                />
+                              </svg>
+                            </button>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
@@ -199,7 +209,7 @@ export function Community() {
                   )}
                 </div>
 
-                {canManagePost(p) && editingPostId === p.id ? (
+                {canEditPost(p) && editingPostId === p.id ? (
                   <div className="flex w-full gap-2">
                     <Button
                       type="button"

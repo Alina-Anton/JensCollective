@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { EventCategory } from "@/data/mockData";
 import { getMergedEvents } from "@/data/mockData";
 import { useAuth } from "@/hooks/useAuth";
+import { isAdminUser } from "@/lib/adminUsers";
 import {
   deleteUserCreatedEvent,
   subscribeUserCreatedEvents,
@@ -32,6 +33,7 @@ function endOfWeek(d: Date) {
 
 export function EventsBoard() {
   const { user } = useAuth();
+  const admin = isAdminUser(user);
   const toast = useToast();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<EventCategory | "All">("All");
@@ -94,12 +96,16 @@ export function EventsBoard() {
     });
   }, [query, category, datePreset, mineOnly, allEvents, user]);
 
-  function canManageEvent(event: (typeof allEvents)[number]) {
+  function canEditEvent(event: (typeof allEvents)[number]) {
     if (event.creatorUid && user?.uid) return event.creatorUid === user.uid;
     const userName = user?.displayName?.trim().toLowerCase();
     return Boolean(
       userName && event.host.name.trim().toLowerCase() === userName,
     );
+  }
+
+  function canDeleteEvent(event: (typeof allEvents)[number]) {
+    return admin || canEditEvent(event);
   }
 
   return (
@@ -138,66 +144,79 @@ export function EventsBoard() {
                     <p className="truncate text-sm font-semibold text-fg">
                       {e.title}
                     </p>
-                    {canManageEvent(e) ? (
+                    {canEditEvent(e) || canDeleteEvent(e) ? (
                       <div className="flex items-center gap-1">
-                        <Link
-                          to={`/events/${e.id}/edit`}
-                          aria-label={`Edit event ${e.title}`}
-                          title="Edit event"
-                          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-fg-soft transition hover:bg-surface-2/60 hover:text-fg"
-                        >
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            aria-hidden
+                        {canEditEvent(e) ? (
+                          <Link
+                            to={`/events/${e.id}/edit`}
+                            aria-label={`Edit event ${e.title}`}
+                            title="Edit event"
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-fg-soft transition hover:bg-surface-2/60 hover:text-fg"
                           >
-                            <path
-                              d="M4 20h4l10-10-4-4L4 16v4z"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <path
-                              d="M13 7l4 4"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </Link>
-                        <button
-                          type="button"
-                          aria-label={`Delete event ${e.title}`}
-                          title="Delete event"
-                          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-fg-soft transition hover:bg-surface-2/60 hover:text-danger"
-                          onClick={() => {
-                            deleteUserCreatedEvent(e.id);
-                            toast.push({
-                              variant: "success",
-                              title: "Event deleted",
-                              description: `${e.title} was removed.`,
-                            });
-                          }}
-                        >
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            aria-hidden
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              aria-hidden
+                            >
+                              <path
+                                d="M4 20h4l10-10-4-4L4 16v4z"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M13 7l4 4"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </Link>
+                        ) : null}
+                        {canDeleteEvent(e) ? (
+                          <button
+                            type="button"
+                            aria-label={`Delete event ${e.title}`}
+                            title="Delete event"
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-fg-soft transition hover:bg-surface-2/60 hover:text-danger"
+                            onClick={async () => {
+                              try {
+                                await deleteUserCreatedEvent(e.id);
+                                toast.push({
+                                  variant: "success",
+                                  title: "Event deleted",
+                                  description: `${e.title} was removed.`,
+                                });
+                              } catch {
+                                toast.push({
+                                  variant: "error",
+                                  title: "Delete failed",
+                                  description:
+                                    "Could not delete this event. Check permissions/rules and try again.",
+                                });
+                              }
+                            }}
                           >
-                            <path
-                              d="M18 6L6 18M6 6l12 12"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                        </button>
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              aria-hidden
+                            >
+                              <path
+                                d="M18 6L6 18M6 6l12 12"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                          </button>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
@@ -228,14 +247,24 @@ export function EventsBoard() {
                 key={e.id}
                 event={e}
                 reservedByUser={reservedSet.has(e.id)}
-                editable={canManageEvent(e)}
-                onDelete={() => {
-                  deleteUserCreatedEvent(e.id);
-                  toast.push({
-                    variant: "success",
-                    title: "Event deleted",
-                    description: `${e.title} was removed.`,
-                  });
+                editable={canEditEvent(e)}
+                deletable={canDeleteEvent(e)}
+                onDelete={async () => {
+                  try {
+                    await deleteUserCreatedEvent(e.id);
+                    toast.push({
+                      variant: "success",
+                      title: "Event deleted",
+                      description: `${e.title} was removed.`,
+                    });
+                  } catch {
+                    toast.push({
+                      variant: "error",
+                      title: "Delete failed",
+                      description:
+                        "Could not delete this event. Check permissions/rules and try again.",
+                    });
+                  }
                 }}
               />
             ))}
