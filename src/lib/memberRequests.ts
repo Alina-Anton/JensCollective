@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -124,62 +125,48 @@ export function upsertPendingMemberRequest(input: Omit<MemberRequest, 'id' | 'st
 }
 
 export async function hasApprovedMemberRequest(email: string) {
-  const normalized = email.trim().toLowerCase()
-  if (!normalized) return false
-  if (firebaseEnabled) {
-    try {
-      const q = query(
-        collection(getFirebaseDb(), REQUESTS_COLLECTION),
-        where('email', '==', normalized),
-      )
-      const snap = await getDocs(q)
-      const remote = snap.docs.map((row) => row.data()).filter(isMemberRequest)
-      if (remote.length) {
-        const latest = remote.sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        )[0]
-        return latest.status === 'approved' && !latest.activatedAt
-      }
-    } catch {
-      // Fallback to local/cached data when remote lookup fails.
-    }
-  }
-  const sameEmail = getMemberRequests()
-    .filter((r) => (r.email ?? '').trim().toLowerCase() === normalized)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  const latest = sameEmail[0]
-  if (!latest) return false
-  return latest.status === 'approved' && !latest.activatedAt
+  return Boolean(await getLatestApprovedMemberRequestForEmail(email))
 }
 
 export async function getLatestApprovedMemberRequestForEmail(email: string): Promise<MemberRequest | null> {
   const normalized = email.trim().toLowerCase()
   if (!normalized) return null
 
+  const pickLatestApprovedUnactivated = (rows: MemberRequest[]) =>
+    rows
+      .filter((r) => (r.email ?? '').trim().toLowerCase() === normalized)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .find((r) => r.status === 'approved' && !r.activatedAt) ?? null
+
   if (firebaseEnabled) {
     try {
-      const q = query(
+      const byEmailQuery = query(
         collection(getFirebaseDb(), REQUESTS_COLLECTION),
         where('email', '==', normalized),
       )
-      const snap = await getDocs(q)
-      const remote = snap.docs
+      const byEmailSnap = await getDocs(byEmailQuery)
+      const exactRemote = byEmailSnap.docs
         .map((row) => row.data())
         .filter(isMemberRequest)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      const latest = remote[0]
-      if (latest?.status === 'approved' && !latest.activatedAt) return latest
-      if (latest) return null
+      const exactMatch = pickLatestApprovedUnactivated(exactRemote)
+      if (exactMatch) return exactMatch
+
+      // Backward compatibility: older rows may have mixed-case emails.
+      const approvedQuery = query(
+        collection(getFirebaseDb(), REQUESTS_COLLECTION),
+        where('status', '==', 'approved'),
+        limit(250),
+      )
+      const approvedSnap = await getDocs(approvedQuery)
+      const approvedRows = approvedSnap.docs.map((row) => row.data()).filter(isMemberRequest)
+      const legacyMatch = pickLatestApprovedUnactivated(approvedRows)
+      if (legacyMatch) return legacyMatch
     } catch {
       // Fallback to local/cached data when remote lookup fails.
     }
   }
 
-  const latest = getMemberRequests()
-    .filter((r) => (r.email ?? '').trim().toLowerCase() === normalized)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
-  if (!latest) return null
-  return latest.status === 'approved' && !latest.activatedAt ? latest : null
+  return pickLatestApprovedUnactivated(getMemberRequests())
 }
 
 export function markApprovedRequestActivated(email: string) {
