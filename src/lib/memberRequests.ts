@@ -140,6 +140,7 @@ export async function getLatestApprovedMemberRequestForEmail(email: string): Pro
 
   if (firebaseEnabled) {
     try {
+      await ensureFirestoreAuth()
       const byEmailQuery = query(
         collection(getFirebaseDb(), REQUESTS_COLLECTION),
         where('email', '==', normalized),

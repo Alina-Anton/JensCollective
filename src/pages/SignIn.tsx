@@ -61,7 +61,9 @@ export function SignIn() {
       const code = (err as { code?: string } | null)?.code;
       const canAutoCreate =
         getAuthMode() === "firebase" &&
-        (code === "auth/user-not-found" || code === "auth/invalid-credential");
+        (code === "auth/user-not-found" ||
+          code === "auth/invalid-credential" ||
+          code === "auth/invalid-login-credentials");
       if (canAutoCreate) {
         const approved = await getLatestApprovedMemberRequestForEmail(email);
         if (approved) {
