@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { messageForAuthError } from "@/lib/authErrors";
 import { isDemoModeEnabled } from "@/lib/demoMode";
+import { isFirebaseConfigured } from "@/lib/firebase";
 import { displayNameForUser, initialsForUser } from "@/lib/userDisplay";
 import { upsertMemberDirectoryEntry } from "@/lib/memberDirectory";
 import {
@@ -75,6 +76,17 @@ export function ProfilePage() {
     getProfileAvatarUrl(),
   );
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const didSyncProfileToCloud = useRef(false);
+
+  /** Push an existing local-only profile to Firestore once (after we added cloud sync). */
+  useEffect(() => {
+    if (didSyncProfileToCloud.current) return;
+    if (!user?.uid || !isFirebaseConfigured() || !profileKey) return;
+    const p = getMemberProfile(profileKey);
+    if (!p) return;
+    didSyncProfileToCloud.current = true;
+    saveMemberProfile(profileKey, p, user.uid);
+  }, [user?.uid, profileKey]);
 
   function onAvatarFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -138,6 +150,25 @@ export function ProfilePage() {
     el.style.height = "0px";
     el.style.height = `${el.scrollHeight}px`;
   }, [aboutDraft, editingProfile]);
+
+  function persistContactVisibility(nextShare: boolean) {
+    setShareContactInfo(nextShare);
+    setShareContactInfoDraft(nextShare);
+    const payload = {
+      preferredName: preferredName.trim(),
+      phone: phone.trim(),
+      emergencyContact: emergencyContact.trim(),
+      shareContactInfo: nextShare,
+      trainingFocus: trainingFocus.trim(),
+      aboutMe: aboutMe.trim(),
+      belt: belt.trim(),
+      hobby: hobby.trim(),
+    };
+    const ownerUid = user?.uid ?? null;
+    saveMemberProfile(profileKey, payload, ownerUid);
+    if (user?.email) saveMemberProfile(user.email, payload, ownerUid);
+    if (user?.displayName) saveMemberProfile(user.displayName, payload, ownerUid);
+  }
 
   if (!user) return null;
 
@@ -283,19 +314,25 @@ export function ProfilePage() {
                     onChange={(e) => setEmergencyContactDraft(e.target.value)}
                     className="mt-2 h-10 w-full border border-border bg-surface px-3 text-sm text-fg outline-none focus:border-accent/45 focus:ring-2 focus:ring-accent/20"
                   />
-                  <label className="mt-3 inline-flex items-center gap-2 text-xs text-fg-soft">
-                    <input
-                      type="checkbox"
-                      className="size-4 rounded border-border bg-surface accent-accent"
-                      checked={shareContactInfoDraft}
-                      onChange={(e) => setShareContactInfoDraft(e.target.checked)}
-                    />
-                    Show phone and emergency contact on Members page
-                  </label>
                 </div>
               ) : (
                 <Field label="Emergency contact" value={emergencyContact} />
               )}
+              <label className="mt-1 inline-flex items-center gap-2 text-xs text-fg-soft">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-border bg-surface accent-accent"
+                  checked={editingProfile ? shareContactInfoDraft : shareContactInfo}
+                  onChange={(e) => {
+                    if (editingProfile) {
+                      setShareContactInfoDraft(e.target.checked);
+                      return;
+                    }
+                    persistContactVisibility(e.target.checked);
+                  }}
+                />
+                Show phone and emergency contact on Members page
+              </label>
               {editingProfile ? (
                 <div className="space-y-1 py-2">
                   <p className="text-xs font-semibold tracking-wide text-muted">
@@ -403,7 +440,7 @@ export function ProfilePage() {
                     setAboutMe(nextAbout);
                     setBelt(nextBelt);
                     setHobby(nextHobby);
-                    saveMemberProfile(profileKey, {
+                    const payload = {
                       preferredName: nextPreferredName,
                       phone: nextPhone,
                       emergencyContact: nextEmergency,
@@ -412,30 +449,14 @@ export function ProfilePage() {
                       aboutMe: nextAbout,
                       belt: nextBelt,
                       hobby: nextHobby,
-                    });
+                    };
+                    const ownerUid = user?.uid ?? null;
+                    saveMemberProfile(profileKey, payload, ownerUid);
                     if (user?.email) {
-                      saveMemberProfile(user.email, {
-                        preferredName: nextPreferredName,
-                        phone: nextPhone,
-                        emergencyContact: nextEmergency,
-                        shareContactInfo: shareContactInfoDraft,
-                        trainingFocus: nextTrainingFocus,
-                        aboutMe: nextAbout,
-                        belt: nextBelt,
-                        hobby: nextHobby,
-                      });
+                      saveMemberProfile(user.email, payload, ownerUid);
                     }
                     if (user?.displayName) {
-                      saveMemberProfile(user.displayName, {
-                        preferredName: nextPreferredName,
-                        phone: nextPhone,
-                        emergencyContact: nextEmergency,
-                        shareContactInfo: shareContactInfoDraft,
-                        trainingFocus: nextTrainingFocus,
-                        aboutMe: nextAbout,
-                        belt: nextBelt,
-                        hobby: nextHobby,
-                      });
+                      saveMemberProfile(user.displayName, payload, ownerUid);
                     }
                     setAvatarMenuOpen(false);
                     setEditingProfile(false);

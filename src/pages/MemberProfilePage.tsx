@@ -7,7 +7,12 @@ import { members } from '@/data/mockData'
 import { useAuth } from '@/hooks/useAuth'
 import { isDemoModeEnabled } from '@/lib/demoMode'
 import { getMergedMemberDirectory, subscribeMemberDirectory } from '@/lib/memberDirectory'
-import { findMemberProfileByName, getMemberProfileByKeys } from '@/lib/memberProfileStorage'
+import {
+  findMemberProfileForDirectoryMember,
+  getMemberProfileByKeys,
+  subscribeMemberProfileForUid,
+  type MemberProfile,
+} from '@/lib/memberProfileStorage'
 
 function initialsFromName(name: string) {
   return (
@@ -56,6 +61,7 @@ export function MemberProfilePage() {
   const { user } = useAuth()
   const demoMode = isDemoModeEnabled()
   const [directoryVersion, setDirectoryVersion] = useState(0)
+  const [remoteProfile, setRemoteProfile] = useState<MemberProfile | null>(null)
   const decodedRef = decodeURIComponent(memberName ?? '')
 
   useEffect(() => subscribeMemberDirectory(() => setDirectoryVersion((v) => v + 1)), [])
@@ -68,6 +74,7 @@ export function MemberProfilePage() {
         ? [
             {
               uid: user.uid,
+              email: user.email ?? '',
               name: user.displayName,
               initials: initialsFromName(user.displayName),
               avatarUrl: user.photoURL ?? '',
@@ -75,23 +82,50 @@ export function MemberProfilePage() {
           ]
         : []
     const merged = [...allDirectoryMembers, ...(demoMode ? members : []), ...currentUserMember]
+    const refLower = decodedRef.trim().toLowerCase()
     const matches = merged.filter((m) => {
       const row = m as { uid?: string; email?: string; name?: string }
-      return row.uid === decodedRef || row.email === decodedRef || row.name === decodedRef
+      const em = row.email?.trim().toLowerCase() ?? ''
+      const nm = row.name?.trim().toLowerCase() ?? ''
+      return (
+        row.uid === decodedRef ||
+        em === refLower ||
+        nm === refLower ||
+        row.name === decodedRef
+      )
     })
     if (!matches.length) return undefined
+    const preferReal = (list: typeof matches) => {
+      const real = list.filter((m) => {
+        const u = (m as { uid?: string }).uid
+        return Boolean(u && !u.startsWith('requested-'))
+      })
+      return real.length ? real : list
+    }
+    const pool = preferReal(matches)
     return (
-      matches.find((m) => Boolean((m as { avatarUrl?: string }).avatarUrl)) ??
-      matches[0]
+      pool.find((m) => Boolean((m as { avatarUrl?: string }).avatarUrl)) ?? pool[0]
     )
   }, [decodedRef, user, demoMode, directoryVersion])
+
+  const profileUid = (member as { uid?: string } | undefined)?.uid
+  useEffect(() => {
+    return subscribeMemberProfileForUid(profileUid, setRemoteProfile)
+  }, [profileUid])
+
   const memberProfile =
+    remoteProfile ??
     getMemberProfileByKeys([
       decodedRef,
       (member as { uid?: string }).uid,
       (member as { email?: string }).email,
       member?.name,
-    ]) ?? (member ? findMemberProfileByName(member.name) : findMemberProfileByName(decodedRef))
+    ]) ??
+    findMemberProfileForDirectoryMember({
+      uid: (member as { uid?: string }).uid,
+      email: (member as { email?: string }).email,
+      name: member?.name,
+    })
 
   if (!member) {
     return (

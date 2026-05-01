@@ -18,9 +18,9 @@ import { AuthContext } from "@/context/authContext";
 import type { AppUser } from "@/lib/appUser";
 import { firebaseUserToAppUser } from "@/lib/appUser";
 import { getAuthMode } from "@/lib/authMode";
+import { cleanupDeletedAccountData } from "@/lib/accountDeletionCleanup";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
 import {
-  deleteMemberDirectoryEntry,
   upsertMemberDirectoryEntryFromUser,
 } from "@/lib/memberDirectory";
 import {
@@ -137,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const deleteAccount = useCallback(async () => {
     if (mode === "local") {
       const current = getLocalSessionUser();
-      if (current?.uid) deleteMemberDirectoryEntry(current.uid);
+      await cleanupDeletedAccountData(current);
       localDeleteCurrentUser();
       setUser(null);
       return;
@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const auth = getFirebaseAuth();
     const current = auth.currentUser;
     if (!current) return;
-    deleteMemberDirectoryEntry(current.uid);
+    await cleanupDeletedAccountData(firebaseUserToAppUser(current));
     await deleteUser(current);
     setUser(null);
   }, [mode]);

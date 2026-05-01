@@ -4,15 +4,21 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { useAuth } from '@/hooks/useAuth'
+import { isAdminUser } from '@/lib/adminUsers'
 import {
+  deleteMemberDirectoryEntry,
   getMergedMemberDirectory,
   subscribeMemberDirectory,
 } from '@/lib/memberDirectory'
+import { deleteMemberProfileDoc } from '@/lib/memberProfileStorage'
+import { useToast } from '@/hooks/useToast'
 
 const MEMBERS_PER_PAGE = 10
 
 export function MembersPage() {
   const { user } = useAuth()
+  const toast = useToast()
+  const isAdmin = isAdminUser(user)
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const [directoryVersion, setDirectoryVersion] = useState(0)
@@ -87,17 +93,51 @@ export function MembersPage() {
         <CardBody>
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {paginatedMembers.map((member) => (
-              <Link
+              <li
                 key={member.uid ?? member.name}
-                to={`/members/${encodeURIComponent(member.uid ?? member.name)}`}
-                className="flex items-center gap-3 rounded-xl border border-border bg-surface/50 px-3 py-2.5"
+                className="rounded-xl border border-border bg-surface/50 px-3 py-2.5"
               >
-                <Avatar initials={member.initials} src={member.avatarUrl} title={member.name} />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-fg">{member.name}</p>
-                  <p className="truncate text-xs text-muted">{member.email || 'No email'}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <Link
+                    to={`/members/${encodeURIComponent(member.uid ?? member.name)}`}
+                    className="min-w-0 flex flex-1 items-center gap-3"
+                  >
+                    <Avatar initials={member.initials} src={member.avatarUrl} title={member.name} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-fg">{member.name}</p>
+                      <p className="truncate text-xs text-muted">{member.email || 'No email'}</p>
+                    </div>
+                  </Link>
+                  {isAdmin && member.uid ? (
+                    <button
+                      type="button"
+                      aria-label={`Delete member ${member.name}`}
+                      title="Delete member"
+                      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-fg-soft transition hover:bg-surface-2/60 hover:text-danger"
+                      onClick={() => {
+                        const approved = window.confirm('Are you sure you want to remove this member permanently?')
+                        if (!approved) return
+                        deleteMemberDirectoryEntry(member.uid)
+                        deleteMemberProfileDoc(member.uid)
+                        toast.push({
+                          variant: 'success',
+                          title: 'Member deleted',
+                          description: `${member.name} was removed from the member directory.`,
+                        })
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path
+                          d="M18 6L6 18M6 6l12 12"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </button>
+                  ) : null}
                 </div>
-              </Link>
+              </li>
             ))}
           </ul>
           {!filteredMembers.length ? (

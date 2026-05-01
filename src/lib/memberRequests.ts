@@ -2,15 +2,15 @@ import {
   collection,
   doc,
   getDocs,
-  limit,
   onSnapshot,
   orderBy,
   query,
   setDoc,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore'
-import { getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase'
+import { ensureFirestoreAuth, getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase'
 import { upsertMemberDirectoryEntry } from '@/lib/memberDirectory'
 
 const STORAGE_KEY = 'jenscollective_member_requests_v1'
@@ -31,6 +31,7 @@ export type MemberRequest = {
   status: 'pending' | 'approved'
   createdAt: string
   reviewedAt?: string
+  activatedAt?: string
 }
 
 function isMemberRequest(x: unknown): x is MemberRequest {
@@ -44,7 +45,8 @@ function isMemberRequest(x: unknown): x is MemberRequest {
     (typeof o.email === 'string' || typeof o.email === 'undefined') &&
     (o.status === 'pending' || o.status === 'approved') &&
     typeof o.createdAt === 'string' &&
-    (typeof o.reviewedAt === 'string' || typeof o.reviewedAt === 'undefined')
+    (typeof o.reviewedAt === 'string' || typeof o.reviewedAt === 'undefined') &&
+    (typeof o.activatedAt === 'string' || typeof o.activatedAt === 'undefined')
   )
 }
 
@@ -83,7 +85,7 @@ export function appendMemberRequest(input: Omit<MemberRequest, 'id' | 'status' |
     name: input.name.trim(),
     referredBy: input.referredBy.trim(),
     details: input.details.trim(),
-    email: input.email?.trim(),
+    email: input.email?.trim().toLowerCase(),
     status: 'pending',
     createdAt: new Date().toISOString(),
   }
@@ -110,7 +112,7 @@ export function upsertPendingMemberRequest(input: Omit<MemberRequest, 'id' | 'st
     name: input.name.trim(),
     referredBy: input.referredBy.trim(),
     details: input.details.trim(),
-    email: input.email?.trim(),
+    email: input.email?.trim().toLowerCase(),
     createdAt: new Date().toISOString(),
   }
   const nextLocal = local.map((r) => (r.id === existing.id ? updated : r))
@@ -129,18 +131,71 @@ export async function hasApprovedMemberRequest(email: string) {
       const q = query(
         collection(getFirebaseDb(), REQUESTS_COLLECTION),
         where('email', '==', normalized),
-        where('status', '==', 'approved'),
-        limit(1),
       )
       const snap = await getDocs(q)
-      if (!snap.empty) return true
+      const remote = snap.docs.map((row) => row.data()).filter(isMemberRequest)
+      if (remote.length) {
+        const latest = remote.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0]
+        return latest.status === 'approved' && !latest.activatedAt
+      }
     } catch {
       // Fallback to local/cached data when remote lookup fails.
     }
   }
-  return getMemberRequests().some(
-    (r) => r.status === 'approved' && (r.email ?? '').trim().toLowerCase() === normalized,
+  const sameEmail = getMemberRequests()
+    .filter((r) => (r.email ?? '').trim().toLowerCase() === normalized)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  const latest = sameEmail[0]
+  if (!latest) return false
+  return latest.status === 'approved' && !latest.activatedAt
+}
+
+export function markApprovedRequestActivated(email: string) {
+  const normalized = email.trim().toLowerCase()
+  if (!normalized) return
+  const target = getMemberRequests()
+    .filter((r) => (r.email ?? '').trim().toLowerCase() === normalized)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .find((r) => r.status === 'approved' && !r.activatedAt)
+  if (!target) return
+
+  const activatedAt = new Date().toISOString()
+  const nextLocal = readLocalRequests().map((r) =>
+    r.id === target.id ? { ...r, activatedAt } : r,
   )
+  writeLocalRequests(nextLocal)
+
+  if (firebaseEnabled) {
+    void updateDoc(doc(collection(getFirebaseDb(), REQUESTS_COLLECTION), target.id), {
+      activatedAt,
+    })
+  }
+}
+
+/** Removes all join-request records for this email (local + Firestore). */
+export async function deleteMemberRequestsForEmail(email: string) {
+  const normalized = email.trim().toLowerCase()
+  if (!normalized) return
+  writeLocalRequests(
+    readLocalRequests().filter((r) => (r.email ?? '').trim().toLowerCase() !== normalized),
+  )
+  if (!firebaseEnabled) return
+  try {
+    await ensureFirestoreAuth()
+    const db = getFirebaseDb()
+    const snap = await getDocs(
+      query(collection(db, REQUESTS_COLLECTION), where('email', '==', normalized)),
+    )
+    for (let i = 0; i < snap.docs.length; i += 400) {
+      const batch = writeBatch(db)
+      for (const d of snap.docs.slice(i, i + 400)) batch.delete(d.ref)
+      await batch.commit()
+    }
+  } catch {
+    // Best-effort cleanup only.
+  }
 }
 
 export function approveMemberRequest(request: MemberRequest) {

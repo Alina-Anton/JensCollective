@@ -8,7 +8,11 @@ import { getAuthMode } from '@/lib/authMode'
 import { messageForAuthError } from '@/lib/authErrors'
 import { firebaseConsoleAuthenticationUrl } from '@/lib/firebase'
 import { useToast } from '@/hooks/useToast'
-import { hasApprovedMemberRequest, upsertPendingMemberRequest } from '@/lib/memberRequests'
+import {
+  hasApprovedMemberRequest,
+  markApprovedRequestActivated,
+  upsertPendingMemberRequest,
+} from '@/lib/memberRequests'
 
 export function SignUp() {
   const navigate = useNavigate()
@@ -64,6 +68,7 @@ export function SignUp() {
       }
 
       await signUpWithEmail(email, password, name.trim())
+      markApprovedRequestActivated(email)
       toast.push({
         variant: 'success',
         title: 'Account created',

@@ -256,10 +256,11 @@ export function EventCard({
                 variant="secondary"
                 className="h-8 w-full px-3 text-xs"
                 onClick={() => {
-                  if (!commentDraft.trim()) return
+                  if (!commentDraft.trim() || !user?.uid) return
                   appendEventComment({
                     eventId: event.id,
-                    author: 'Member',
+                    author: displayNameForUser(user),
+                    authorUid: user.uid,
                     body: commentDraft,
                   })
                   setShowComments(true)

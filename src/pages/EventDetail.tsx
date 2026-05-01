@@ -273,10 +273,11 @@ export function EventDetail() {
                     className="w-full"
                     onClick={() => {
                       const body = commentDraft.trim();
-                      if (!body) return;
+                      if (!body || !user?.uid) return;
                       appendEventComment({
                         eventId: event.id,
                         author: displayNameForUser(user),
+                        authorUid: user.uid,
                         body,
                       });
                       setShowCommentComposer(false);

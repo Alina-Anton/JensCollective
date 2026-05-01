@@ -9,11 +9,27 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "aa.in.labs@gmail.com" ||
+        request.auth.token.email == "jen.clanton@gmail.com" ||
+        request.auth.token.name == "Alina Anton" ||
+        request.auth.token.name == "Jen Clanton"
+      );
+    }
+
+    // Extended profile fields (My Account); readable by signed-in members, writable only by owner.
+    match /memberProfiles/{profileUid} {
+      allow read: if isSignedIn();
+      allow create, update: if isOwner(profileUid);
+      allow delete: if isOwner(profileUid) || isAdmin();
+    }
+
     // Shared member directory (readable by signed-in users).
     match /membersDirectory/{memberUid} {
       allow read: if isSignedIn();
       allow create, update: if isOwner(memberUid);
-      allow delete: if isOwner(memberUid);
+      allow delete: if isOwner(memberUid) || isAdmin();
     }
 
     // Shared events board.
@@ -37,8 +53,11 @@ service cloud.firestore {
     // Shared comments for community posts.
     match /communityComments/{commentId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if false;
+      allow create: if isSignedIn()
+        && request.resource.data.authorUid == request.auth.uid;
+      allow update: if false;
+      allow delete: if isSignedIn()
+        && resource.data.authorUid == request.auth.uid;
     }
 
     // Join requests can be submitted from sign-in page before authentication.
@@ -46,14 +65,23 @@ service cloud.firestore {
       allow create: if true;
       allow read: if isSignedIn();
       allow update: if isSignedIn();
-      allow delete: if false;
+      allow delete: if isAdmin()
+        || (
+          isSignedIn()
+          && resource.data.email is string
+          && request.auth.token.email is string
+          && resource.data.email.lower() == request.auth.token.email.lower()
+        );
     }
 
     // Shared comments tied to events.
     match /eventComments/{commentId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if false;
+      allow create: if isSignedIn()
+        && request.resource.data.authorUid == request.auth.uid;
+      allow update: if false;
+      allow delete: if isSignedIn()
+        && resource.data.authorUid == request.auth.uid;
     }
 
     // Shared reservations tied to events.

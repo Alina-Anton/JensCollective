@@ -82,6 +82,25 @@ function upsertLocalMembersCache(entry: MemberDirectoryEntry) {
   writeLocalMembersCache(Array.from(byUid.values()));
 }
 
+/** When two directory rows share the same display name, keep the real account over a pre-signup placeholder. */
+function pickBetterDirectoryEntry(
+  a: MemberDirectoryEntry,
+  b: MemberDirectoryEntry,
+): MemberDirectoryEntry {
+  const aPlaceholder = a.uid.startsWith("requested-");
+  const bPlaceholder = b.uid.startsWith("requested-");
+  if (aPlaceholder && !bPlaceholder) return b;
+  if (!aPlaceholder && bPlaceholder) return a;
+  const score = (m: MemberDirectoryEntry) =>
+    (m.avatarUrl?.trim() ? 4 : 0) +
+    (m.email?.trim() ? 2 : 0) +
+    (m.uid.length >= 20 && !m.uid.startsWith("requested-") ? 1 : 0);
+  const sa = score(a);
+  const sb = score(b);
+  if (sb !== sa) return sb > sa ? b : a;
+  return a.uid.length >= b.uid.length ? a : b;
+}
+
 export function getMergedMemberDirectory(): MemberDirectoryEntry[] {
   const local = getLocalAuthMemberDirectory();
   const localCache = readLocalMembersCache();
@@ -94,7 +113,9 @@ export function getMergedMemberDirectory(): MemberDirectoryEntry[] {
   for (const member of merged) {
     const key = member.name.trim().toLowerCase();
     if (!key) continue;
-    if (!byName.has(key)) byName.set(key, member);
+    const existing = byName.get(key);
+    if (!existing) byName.set(key, member);
+    else byName.set(key, pickBetterDirectoryEntry(existing, member));
   }
   return Array.from(byName.values()).sort((a, b) =>
     a.name.localeCompare(b.name),
@@ -176,11 +197,16 @@ export function upsertMemberDirectoryEntry(entry: MemberDirectoryEntry) {
   );
 }
 
-export function deleteMemberDirectoryEntry(uid: string) {
-  if (!uid) return;
-  const local = readLocalMembersCache().filter((m) => m.uid !== uid);
+export function deleteMemberDirectoryEntry(uid: string, emailNormalized?: string) {
+  if (!uid && !emailNormalized) return;
+  const email = emailNormalized?.trim().toLowerCase() ?? "";
+  const local = readLocalMembersCache().filter((m) => {
+    if (uid && m.uid === uid) return false;
+    if (email && m.email.trim().toLowerCase() === email) return false;
+    return true;
+  });
   writeLocalMembersCache(local);
-  if (!firebaseEnabled) return;
+  if (!firebaseEnabled || !uid) return;
   void ensureFirestoreAuth().then(() =>
     deleteDoc(doc(collection(getFirebaseDb(), MEMBERS_COLLECTION), uid)).catch(() => {
       // Best effort cleanup only.

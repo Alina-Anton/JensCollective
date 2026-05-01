@@ -13,19 +13,29 @@ import { useAuth } from '@/hooks/useAuth'
 import { isAdminUser } from '@/lib/adminUsers'
 
 export function NewMemberRequests() {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const toast = useToast()
   const [version, setVersion] = useState(0)
   const [approvingId, setApprovingId] = useState<string | null>(null)
 
   useEffect(() => subscribeMemberRequests(() => setVersion((v) => v + 1)), [])
 
+  if (loading) {
+    return (
+      <section className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+        <p className="text-sm text-muted">Loading requests...</p>
+      </section>
+    )
+  }
+
   if (!isAdminUser(user)) {
     return <Navigate to="/" replace />
   }
 
-  const requests = useMemo(() => getMemberRequests(), [version])
-  const pending = requests.filter((r) => r.status === 'pending')
+  const requests = useMemo(
+    () => getMemberRequests().filter((r) => r.status === 'pending'),
+    [version],
+  )
 
   function onApprove(request: MemberRequest) {
     setApprovingId(request.id)
@@ -52,30 +62,43 @@ export function NewMemberRequests() {
 
       <Card>
         <CardHeader>
-          <h2 className="text-sm font-semibold text-fg">Pending requests</h2>
+          <h2 className="text-sm font-semibold text-fg">Requests</h2>
         </CardHeader>
         <CardBody className="space-y-3">
-          {pending.length ? (
-            pending.map((r) => (
+          {requests.length ? (
+            requests.map((r) => (
               <article key={r.id} className="rounded-xl border border-border bg-surface-2 p-4">
-                <p className="text-sm font-semibold text-fg">{r.name}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-fg">{r.name}</p>
+                  <span
+                    className={
+                      r.status === 'pending'
+                        ? 'rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold text-warning'
+                        : 'rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold text-success'
+                    }
+                  >
+                    {r.status}
+                  </span>
+                </div>
                 <p className="mt-1 text-xs text-muted">
                   Referred by: {r.referredBy || 'N/A'}
                 </p>
                 {r.email ? <p className="mt-1 text-xs text-muted">Email: {r.email}</p> : null}
                 <p className="mt-2 whitespace-pre-wrap text-sm text-fg-soft">{r.details}</p>
-                <div className="mt-3">
-                  <Button
-                    onClick={() => onApprove(r)}
-                    loading={approvingId === r.id}
-                  >
-                    Approve
-                  </Button>
-                </div>
+                {r.status === 'pending' ? (
+                  <div className="mt-3">
+                    <Button
+                      onClick={() => onApprove(r)}
+                      loading={approvingId === r.id}
+                    >
+                      Approve
+                    </Button>
+                  </div>
+                ) : null}
               </article>
             ))
           ) : (
-            <p className="text-sm text-muted">No pending requests.</p>
+            <p className="text-sm text-muted">No requests yet.</p>
           )}
         </CardBody>
       </Card>

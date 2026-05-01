@@ -28,6 +28,8 @@ export type CommunityComment = {
   id: string
   postId: string
   author: string
+  /** Set for new comments so the author can delete them (account cleanup). */
+  authorUid?: string
   body: string
   at: string
 }
@@ -90,6 +92,7 @@ function isCommunityComment(x: unknown): x is CommunityComment {
     typeof o.id === 'string' &&
     typeof o.postId === 'string' &&
     typeof o.author === 'string' &&
+    (typeof o.authorUid === 'string' || typeof o.authorUid === 'undefined') &&
     typeof o.body === 'string' &&
     typeof o.at === 'string'
   )

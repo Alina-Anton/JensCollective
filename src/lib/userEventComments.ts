@@ -13,6 +13,8 @@ export type EventComment = {
   id: string
   eventId: string
   author: string
+  /** Set for new comments so the author can delete them (account cleanup). */
+  authorUid?: string
   body: string
   at: string
 }
@@ -24,6 +26,7 @@ function isEventComment(x: unknown): x is EventComment {
     typeof o.id === 'string' &&
     typeof o.eventId === 'string' &&
     typeof o.author === 'string' &&
+    (typeof o.authorUid === 'string' || typeof o.authorUid === 'undefined') &&
     typeof o.body === 'string' &&
     typeof o.at === 'string'
   )
@@ -67,6 +70,7 @@ export function appendEventComment(input: Omit<EventComment, 'id' | 'at'>) {
     id: `event-comment-${crypto.randomUUID()}`,
     eventId: input.eventId,
     author: input.author,
+    authorUid: input.authorUid,
     body: input.body.trim(),
     at: new Date().toISOString(),
   }

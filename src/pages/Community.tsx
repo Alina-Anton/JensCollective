@@ -306,13 +306,14 @@ export function Community() {
                         className="h-8 w-full px-3 text-xs"
                         onClick={() => {
                           const value = (commentDrafts[p.id] ?? '').trim()
-                          if (!value) return
+                          if (!value || !user?.uid) return
                           const name =
-                            user?.displayName?.trim() || user?.email?.split('@')[0] || 'Member'
+                            user.displayName?.trim() || user.email?.split('@')[0] || 'Member'
                           appendUserCommunityComment({
                             id: `comment-${crypto.randomUUID()}`,
                             postId: p.id,
                             author: name,
+                            authorUid: user.uid,
                             body: value,
                             at: new Date().toISOString(),
                           })
