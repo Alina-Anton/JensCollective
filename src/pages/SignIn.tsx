@@ -16,7 +16,7 @@ export function SignIn() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const { user, signInWithEmail, signUpWithEmail } = useAuth();
+  const { user, signInWithEmail, signUpWithEmail, deleteAccount } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
@@ -66,12 +66,21 @@ export function SignIn() {
           code === "auth/invalid-login-credentials");
       if (canAutoCreate) {
         const approved = await getLatestApprovedMemberRequestForEmail(email);
-        if (approved) {
-          await signUpWithEmail(
-            email,
-            password,
-            approved.name?.trim() || email.split("@")[0] || "Member",
-          );
+        const nextName = approved?.name?.trim() || email.split("@")[0] || "Member";
+
+        try {
+          await signUpWithEmail(email, password, nextName);
+        } catch (signupErr) {
+          const signupCode = (signupErr as { code?: string } | null)?.code;
+          // If the account already exists, continue to the normal error message path.
+          if (signupCode !== "auth/email-already-in-use") throw signupErr;
+        }
+
+        const approvedAfterCreate = approved
+          ? approved
+          : await getLatestApprovedMemberRequestForEmail(email);
+
+        if (approvedAfterCreate) {
           markApprovedRequestActivated(email);
           toast.push({
             variant: "success",
@@ -81,6 +90,9 @@ export function SignIn() {
           navigate(fromPath, { replace: true });
           return;
         }
+
+        // Safety net: if no approved request exists, remove the just-created account.
+        await deleteAccount();
       }
       toast.push({
         variant: "error",
