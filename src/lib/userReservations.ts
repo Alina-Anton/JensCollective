@@ -72,6 +72,14 @@ export function getReservationNamesByEventId(eventId: string) {
   )
 }
 
+export function getReservedSpotCountByEventId(eventId: string) {
+  return new Set(
+    getAllReservations()
+      .filter((r) => r.eventId === eventId && (r.status === 'confirmed' || r.status === 'attended'))
+      .map((r) => r.userUid),
+  ).size
+}
+
 export function upsertUserReservation(
   eventId: string,
   status: 'confirmed' | 'waitlist',

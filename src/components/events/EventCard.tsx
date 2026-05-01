@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { GymEvent } from '@/data/mockData'
-import { formatMoney, spotsLeft } from '@/data/mockData'
+import { formatMoney } from '@/data/mockData'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ReserveButton } from '@/components/events/ReserveButton'
@@ -9,7 +9,13 @@ import { cn } from '@/lib/cn'
 import { useToast } from '@/hooks/useToast'
 import { useAuth } from '@/hooks/useAuth'
 import { displayNameForUser } from '@/lib/userDisplay'
-import { cancelUserReservation, getReservationNamesByEventId, upsertUserReservation } from '@/lib/userReservations'
+import {
+  cancelUserReservation,
+  getReservationNamesByEventId,
+  getReservedSpotCountByEventId,
+  subscribeUserReservations,
+  upsertUserReservation,
+} from '@/lib/userReservations'
 import { appendEventComment, getEventCommentsByEventId, subscribeEventComments } from '@/lib/userEventComments'
 
 function formatRange(startsAt: string, endsAt: string) {
@@ -37,7 +43,6 @@ export function EventCard({
   deletable?: boolean
   onDelete?: () => void
 }) {
-  const left = spotsLeft(event)
   const toast = useToast()
   const { user } = useAuth()
   const [showAttendees, setShowAttendees] = useState(false)
@@ -45,8 +50,13 @@ export function EventCard({
   const [showCommentComposer, setShowCommentComposer] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
   const [commentsVersion, setCommentsVersion] = useState(0)
+  const [reservationsVersion, setReservationsVersion] = useState(0)
   useEffect(() => subscribeEventComments(() => setCommentsVersion((v) => v + 1)), [])
+  useEffect(() => subscribeUserReservations(() => setReservationsVersion((v) => v + 1)), [])
 
+  void reservationsVersion
+  const reservedCount = getReservedSpotCountByEventId(event.id)
+  const left = Math.max(0, event.maxSpots - reservedCount)
   const attendeeNames = getReservationNamesByEventId(event.id)
   const allComments = useMemo(() => {
     void commentsVersion
@@ -142,7 +152,7 @@ export function EventCard({
           <div>
             <dt className="text-xs font-semibold tracking-wide text-muted">Spots</dt>
             <dd className="mt-1 text-fg-soft">
-              {left}/{event.maxSpots}
+              {reservedCount}/{event.maxSpots}
             </dd>
           </div>
         </dl>

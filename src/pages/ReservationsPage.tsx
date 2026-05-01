@@ -2,9 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
-import { getEventById, reservations, formatMoney, spotsLeft } from '@/data/mockData'
+import { getEventById, reservations, formatMoney } from '@/data/mockData'
 import { useAuth } from '@/hooks/useAuth'
-import { getUserReservations, subscribeUserReservations } from '@/lib/userReservations'
+import {
+  getReservedSpotCountByEventId,
+  getUserReservations,
+  subscribeUserReservations,
+} from '@/lib/userReservations'
 
 export function ReservationsPage() {
   const { user } = useAuth()
@@ -83,7 +87,7 @@ export function ReservationsPage() {
                         · {e.location}
                       </p>
                       <p className="mt-2 text-xs text-muted">
-                        {spotsLeft(e)} public spots remaining · max {e.maxSpots}
+                        {Math.max(0, e.maxSpots - getReservedSpotCountByEventId(e.id))} public spots remaining · max {e.maxSpots}
                       </p>
                     </div>
                     <div className="flex flex-col gap-2 sm:items-end">

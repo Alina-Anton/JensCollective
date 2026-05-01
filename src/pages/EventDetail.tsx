@@ -8,13 +8,13 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ReserveButton } from "@/components/events/ReserveButton";
 import {
   getEventById,
-  spotsLeft,
 } from "@/data/mockData";
 import { formatDateTimeRange } from "@/lib/format";
 import { useToast } from "@/hooks/useToast";
 import {
   cancelUserReservation,
   getReservationNamesByEventId,
+  getReservedSpotCountByEventId,
   getReservedEventIdSet,
   subscribeUserReservations,
   upsertUserReservation,
@@ -74,7 +74,8 @@ export function EventDetail() {
     );
   }
 
-  const left = spotsLeft(event);
+  const reservedCount = getReservedSpotCountByEventId(event.id);
+  const left = Math.max(0, event.maxSpots - reservedCount);
   const { dayLine, timeLine } = formatDateTimeRange(
     event.startsAt,
     event.endsAt,
