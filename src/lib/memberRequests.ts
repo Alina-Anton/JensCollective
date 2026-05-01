@@ -152,6 +152,36 @@ export async function hasApprovedMemberRequest(email: string) {
   return latest.status === 'approved' && !latest.activatedAt
 }
 
+export async function getLatestApprovedMemberRequestForEmail(email: string): Promise<MemberRequest | null> {
+  const normalized = email.trim().toLowerCase()
+  if (!normalized) return null
+
+  if (firebaseEnabled) {
+    try {
+      const q = query(
+        collection(getFirebaseDb(), REQUESTS_COLLECTION),
+        where('email', '==', normalized),
+      )
+      const snap = await getDocs(q)
+      const remote = snap.docs
+        .map((row) => row.data())
+        .filter(isMemberRequest)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      const latest = remote[0]
+      if (latest?.status === 'approved' && !latest.activatedAt) return latest
+      if (latest) return null
+    } catch {
+      // Fallback to local/cached data when remote lookup fails.
+    }
+  }
+
+  const latest = getMemberRequests()
+    .filter((r) => (r.email ?? '').trim().toLowerCase() === normalized)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+  if (!latest) return null
+  return latest.status === 'approved' && !latest.activatedAt ? latest : null
+}
+
 export function markApprovedRequestActivated(email: string) {
   const normalized = email.trim().toLowerCase()
   if (!normalized) return

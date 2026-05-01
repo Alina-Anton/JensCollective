@@ -7,12 +7,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { getAuthMode } from "@/lib/authMode";
 import { messageForAuthError } from "@/lib/authErrors";
 import { useToast } from "@/hooks/useToast";
+import {
+  getLatestApprovedMemberRequestForEmail,
+  markApprovedRequestActivated,
+} from "@/lib/memberRequests";
 
 export function SignIn() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
-  const { user, signInWithEmail } = useAuth();
+  const { user, signInWithEmail, signUpWithEmail } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
@@ -54,6 +58,28 @@ export function SignIn() {
       });
       navigate(fromPath, { replace: true });
     } catch (err) {
+      const code = (err as { code?: string } | null)?.code;
+      const canAutoCreate =
+        getAuthMode() === "firebase" &&
+        (code === "auth/user-not-found" || code === "auth/invalid-credential");
+      if (canAutoCreate) {
+        const approved = await getLatestApprovedMemberRequestForEmail(email);
+        if (approved) {
+          await signUpWithEmail(
+            email,
+            password,
+            approved.name?.trim() || email.split("@")[0] || "Member",
+          );
+          markApprovedRequestActivated(email);
+          toast.push({
+            variant: "success",
+            title: "Account activated",
+            description: "Your approved request is now active. Redirecting…",
+          });
+          navigate(fromPath, { replace: true });
+          return;
+        }
+      }
       toast.push({
         variant: "error",
         title: "Sign-in failed",
