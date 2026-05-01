@@ -67,13 +67,18 @@ export function SignIn() {
       if (canAutoCreate) {
         const approved = await getLatestApprovedMemberRequestForEmail(email);
         const nextName = approved?.name?.trim() || email.split("@")[0] || "Member";
+        let accountAlreadyExisted = false;
 
         try {
           await signUpWithEmail(email, password, nextName);
         } catch (signupErr) {
           const signupCode = (signupErr as { code?: string } | null)?.code;
           // If the account already exists, continue to the normal error message path.
-          if (signupCode !== "auth/email-already-in-use") throw signupErr;
+          if (signupCode === "auth/email-already-in-use") {
+            accountAlreadyExisted = true;
+          } else {
+            throw signupErr;
+          }
         }
 
         const approvedAfterCreate = approved
@@ -81,6 +86,10 @@ export function SignIn() {
           : await getLatestApprovedMemberRequestForEmail(email);
 
         if (approvedAfterCreate) {
+          // Ensure the user is fully authenticated before redirecting to shared data screens.
+          if (accountAlreadyExisted) {
+            await signInWithEmail(email, password);
+          }
           markApprovedRequestActivated(email);
           toast.push({
             variant: "success",
